@@ -60,19 +60,18 @@ body{margin:0;overflow:hidden;color:var(--fg);font-family:var(--f-body);font-siz
 .deck button{min-height:76px}
 .deck button small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 /* 기계 */
-.view{position:relative;min-height:0;perspective:1100px;overflow:hidden;border-radius:14px}
+.view{position:relative;min-height:0;overflow:hidden;border-radius:14px}
 .view::after{content:"";position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 0 0 transparent;transition:box-shadow .3s}
 .view.s60::after{box-shadow:inset 0 0 40px 6px color-mix(in srgb,var(--amber) 45%,transparent)}
 .view.s80::after{box-shadow:inset 0 0 60px 14px color-mix(in srgb,var(--crimson) 70%,transparent)}
-.machine{position:relative;height:100%;display:grid;grid-template-rows:auto minmax(0,1fr);gap:6px;transform:rotateX(9deg);transform-origin:50% 100%;
-  transition:transform .8s cubic-bezier(.2,.7,.2,1)}
-.view.lean .machine{transform:rotateX(3deg) scale(1.6);transform-origin:50% 93%}
+.machine{position:relative;height:100%;display:grid;grid-template-rows:auto minmax(0,1fr);gap:6px}
 .lcd{justify-self:center;width:min(100%,380px);background:var(--lcd);border:2px solid color-mix(in srgb,var(--silver) 40%,var(--lcd));border-radius:10px;padding:5px 12px;display:flex;justify-content:space-between;align-items:baseline;gap:10px}
 .lcd span{font-size:10px;letter-spacing:.14em;color:var(--magenta);font-weight:700}
 .lcd strong{font-family:var(--f-num);font-weight:600;font-size:clamp(15px,3.6vw,20px);color:var(--amber);font-variant-numeric:tabular-nums;text-shadow:0 0 12px color-mix(in srgb,var(--amber) 50%,transparent)}
-canvas{display:block;width:100%;height:100%;object-fit:contain;min-height:0}
-@media (prefers-reduced-motion:no-preference){.view.shake canvas{animation:shake .22s}}
-@keyframes shake{20%{transform:translate(-4px,2px)}45%{transform:translate(4px,-2px)}70%{transform:translate(-2px,1px)}}
+canvas{display:block;width:100%;height:100%;min-height:0;border-radius:12px}
+.chip{position:absolute;left:0;top:0;z-index:3;pointer-events:none;font-family:var(--f-num);font-size:13px;font-weight:700;padding:2px 9px;border-radius:999px;
+  background:color-mix(in srgb,var(--hall) 80%,transparent);color:var(--amber);border:1px solid var(--line);white-space:nowrap}
+.chip.hot{color:var(--crimson);border-color:var(--crimson)}
 /* 독백·경고 */
 .mono{min-height:3.1em;display:grid;place-items:center;border-block:1px solid var(--line);padding-block:4px}   /* 독백은 기계 밖 자막 줄 — 판을 가리지 않는다 */
 .mono p{margin:0;font-family:var(--f-voice);font-weight:700;font-size:clamp(14px,3.4vw,16px);line-height:1.45;text-align:center;text-wrap:balance}
@@ -98,14 +97,6 @@ canvas{display:block;width:100%;height:100%;object-fit:contain;min-height:0}
 .deck button .lbl,.deck button small{position:relative}
 #floor.held{filter:brightness(1.25);transform:translateY(2px)}
 .pop.down{color:var(--good)}
-/* 기계 유리 반사광 */
-.machine::after{content:"";position:absolute;inset:0;pointer-events:none;border-radius:16px;background:linear-gradient(115deg,transparent 28%,rgba(255,255,255,.08) 36%,transparent 44%,transparent 62%,rgba(255,255,255,.05) 68%,transparent 74%)}
-/* 순찰: 직원 그림자가 화면을 가로지른다 */
-.patrol-shadow{position:absolute;top:-5%;bottom:-5%;left:-45%;width:42%;z-index:2;pointer-events:none;opacity:0;filter:blur(8px);
-  background:radial-gradient(28% 16% at 50% 18%,rgba(4,2,8,.95),transparent 72%),radial-gradient(46% 42% at 50% 62%,rgba(4,2,8,.9),transparent 72%)}
-@media (prefers-reduced-motion:no-preference){.patrol-shadow.walk{animation:walk var(--dur,7s) linear forwards}}
-@media (prefers-reduced-motion:reduce){.patrol-shadow.walk{left:30%;opacity:.55}}
-@keyframes walk{0%{opacity:0;transform:translateX(0)}12%{opacity:.8}88%{opacity:.8}100%{opacity:0;transform:translateX(345%)}}
 #grip{padding:4px 10px;font-size:12px;min-height:0}
 #grip[aria-pressed="true"]{border-color:var(--good);color:var(--good)}
 #mass{font-family:var(--f-display);font-size:22px;background:linear-gradient(180deg,var(--crimson),#9c1a2d);border-color:var(--crimson)}
@@ -138,7 +129,6 @@ canvas{display:block;width:100%;height:100%;object-fit:contain;min-height:0}
   .acts button{font-size:12px;line-height:1.25}
   .deck button small{font-size:10px;line-height:1.25}
   #mass{font-size:18px}
-  .view.lean .machine{transform:rotateX(2deg) scale(2);transform-origin:50% 91%}
 }
 /* 오버레이 */
 .sheet{position:fixed;inset:0;z-index:20;display:grid;place-items:center;background:color-mix(in srgb,var(--hall) 86%,transparent);

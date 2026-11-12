@@ -2,7 +2,7 @@
 
 지하 홀의 거대 파친코 앞에 앉아, 12분 안에 세 관문(못의 숲 → 문지기 → 3단 원반)과 하우스의 숨은 장치를 뚫는 1인칭 승부 게임입니다. 『도박묵시록 카이지』의 '늪'에서 메커니즘만 빌려 왔고, 이름·인물·그림·대사는 새로 만들었습니다.
 
-**바로 하기: https://yigeon.github.io/abyss-night/** (PC·폰 브라우저)
+**바로 하기: https://yigeon.github.io/abyss-night/** (PC·폰 브라우저, WebGL 필요)
 
 처음이라면 브리핑 화면에서 '연습으로 앉는다'부터 해 보세요. 15분이고 의심도가 빨리 식습니다.
 
@@ -26,7 +26,7 @@ uv run --no-project python -m http.server 8000
 # 내 IP 확인: ipconfig getifaddr en0
 ```
 
-글꼴은 Google Fonts에서 받아 옵니다. 오프라인이면 시스템 글꼴로 대신 표시되고, 게임은 그대로 돌아갑니다.
+3D 화면은 Three.js r160을 cdnjs에서 받아 옵니다. 그래서 `file://`로 열어도 인터넷 연결이 필요합니다. 글꼴(Google Fonts)은 오프라인이면 시스템 글꼴로 대신 표시됩니다. 콘솔에 Three.js의 "build/three.min.js is deprecated" 경고가 한 줄 뜨는데, 일반 `<script>`로 쓸 수 있는 마지막 버전이라 그렇고 동작에는 영향이 없습니다.
 
 ## 조작
 
@@ -55,12 +55,12 @@ uv run --no-project python -m http.server 8000
 index.html     마크업
 style.css      스타일 (폰 폭 520px 이하 압축 레이아웃 포함)
 js/sim.js      물리 시뮬레이션(createSim) + 게임 규칙(createGame). DOM을 쓰지 않는다
-js/render.js   캔버스 그리기
+js/render.js   3D 렌더러(Three.js). sim.js의 2D 좌표를 3D 월드로 옮겨 그리고, 카메라·연출을 맡는다
 js/ui.js       1인칭 UI, 소리, 입력, 메인 루프
 tools/bot.js   밸런스 측정 봇
 ```
 
-스크립트는 일반 `<script>` 태그로 순서대로 읽습니다. ES 모듈을 쓰지 않아서 `file://`로 열어도 동작합니다.
+스크립트는 일반 `<script>` 태그로 순서대로 읽습니다(three.min.js → sim.js → render.js → ui.js). ES 모듈을 쓰지 않아서 `file://`로 열어도 동작합니다.
 
 ## 밸런스 조정
 
