@@ -109,6 +109,7 @@ function draw(dt){
   for(const b of sim.balls)ball(b.x,b.y);
   for(const b of sim.gk)ball(b.x,b.y);
   for(const d of DISH)for(const h of d.holes)if(h.fill>=CLOG_CAP)ball(d.x+h.x,d.y+h.y*Q);
+  ctx.fillStyle='rgba(0,0,0,.35)';for(const b of sim.dish){const d=DISH[b.k];ctx.beginPath();ctx.ellipse(d.x+b.x+1,d.y+b.y*Q+BR*.9,BR*BK*.9,BR*BK*.35,0,0,7);ctx.fill();}   // 원반 위 구슬 그림자
   for(const b of sim.dish){const d=DISH[b.k];ball(d.x+b.x,d.y+b.y*Q);}
   if(sim.wind){const d=DISH[2],w=d.holes[0],x=d.x+w.x,y=d.y+w.y*Q;ctx.strokeStyle=C.silver;ctx.lineWidth=1.5;
     for(let i=0;i<3;i++){const p=(clock*2+i/3)%1;ctx.globalAlpha=1-p;ctx.beginPath();ctx.ellipse(x,y-2-p*10,HOLE+p*8,(HOLE+p*8)*Q,0,Math.PI,2*Math.PI);ctx.stroke();}

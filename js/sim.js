@@ -153,7 +153,7 @@ function createSim(rand=Math.random){
       const drop=(hd<HOLE-2.5&&Math.hypot(b.vx,b.vy)<V_DROP)||(b.age>30&&!h.win);
       if(!drop){if(b.age>45){b.vx+=(rand()-.5)*200;b.vy+=(rand()-.5)*200;b.age=30;}continue;}   // 오래 멈춘 구슬은 진동으로 흔들림
       s.dish.splice(i,1);s.count[b.k]--;h.flash=1;
-      if(!h.win){if(s.clogged())h.fill++;s.events.push({t:'lose',k:b.k});continue;}
+      if(!h.win){if(s.clogged()&&++h.fill===CLOG_CAP)s.events.push({t:'plug',k:b.k,x:h.x,y:h.y});s.events.push({t:'lose',k:b.k});continue;}
       s.st.pass[b.k]++;
       if(b.k<2)s.enterDish(b.k+1);
       else{const pay=Math.max(s.pool*PRICE,MIN_PAY);s.st.jack++;s.st.won+=pay;s.events.push({t:'jack',amount:pay});s.pool=0;}
@@ -162,17 +162,22 @@ function createSim(rand=Math.random){
   s.reset();s.apply();
   return s;
 }
-// ── 게임 규칙: 하룻밤 승부 (하우스 AI + 군자금 + 의심도). 수치는 봇 시뮬레이션으로 맞춤(최적 봇 승률 약 70%)
+// ── 게임 규칙: 하룻밤 승부 (하우스 AI + 군자금 + 의심도 + 직원 순찰). 수치는 tools/bot.js로 맞춘다
 const GAME={START:35e6,PREP:20e6,NIGHT:720,
-  S_MASS:.7,S_DECAY:.5,CALM:3,S_FLOOR:2,S_BREAK:10,S_JOLT:3,S_CROWD:1.5,CROWD_AT:20,
-  T_BLOCK:40,T_LOCK:60,T_CALL:80,CALL_T:20,CALL_SAFE:70,FLOOR_CD:8,JOLT_CD:3,WARN:3,REPAIR:60,WIND_AT:1,WIND_BOOST:2};   // 바람 커튼은 3단에 첫 구슬이 오면 꺼낸다(구슬 한두 개를 두드려 넣는 지름길 차단)
+  S_MASS:.7,S_DECAY:.5,CALM:3,S_FILL:.4,FILL_RATE:.2,S_BREAK:10,S_JOLT:3,S_CROWD:1.5,CROWD_AT:20,
+  T_BLOCK:40,T_LOCK:60,T_CALL:80,CALL_T:20,CALL_SAFE:70,JOLT_CD:3,WARN:3,REPAIR:60,
+  WIND_AT:1,WIND_BOOST:2,WIND_TRIG:24,WIND_REACT:.35,WIND_HOLD:1.2,          // 바람 커튼: 당첨 구멍 근처에 구슬이 오면 0.35초 늦게 분다
+  PATROL_FIRST:[35,50],PATROL_GAP:[40,60],PATROL_WARN:2,PATROL_LEN:[6,8],S_CAUGHT:12,CAUGHT_CD:1.5,S_CLEAN:5};   // 직원 순찰
+const between=([a,b])=>a+Math.random()*(b-a);
 function createGame(sim,mode='real'){
   const P=mode==='practice'?Object.assign({},GAME,{NIGHT:900,S_DECAY:GAME.S_DECAY*1.5,CALM:GAME.CALM/2}):GAME;   // 연습: 15분, 의심이 빨리 식는다
-  const g={mode,P,lastSpill:0,state:'brief',money:P.START-P.PREP,sus:0,susMax:0,t:0,why:'',payout:0,grip:true,mass:false,jolts:0,calmT:0,
-    floorCD:0,joltCD:0,repairT:0,repairing:false,callT:0,windArmed:false,warn:[],fired0:0,flags:{},events:[]};
+  const g={mode,P,lastSpill:0,state:'brief',money:P.START-P.PREP,sus:0,susMax:0,t:0,why:'',payout:0,grip:true,mass:false,fill:false,water:0,jolts:0,caught:0,
+    calmT:0,nearT:0,windT:0,joltCD:0,repairT:0,repairing:false,callT:0,windArmed:false,
+    patrol:'none',patrolT:between(P.PATROL_FIRST),patrolLeft:0,caughtCD:0,offended:false,warn:[],fired0:0,flags:{},events:[]};
   const emit=(t,x)=>g.events.push({t,...x});
   const schedule=(what,fn)=>{g.warn.push({what,left:P.WARN,fn});emit('warn',{what});};   // 하우스는 3초 전에 티가 난다
-  const end=(state,why)=>{g.state=state;g.why=why;sim.auto=sim.mass=false;emit('end');};
+  const end=(state,why)=>{g.state=state;g.why=why;sim.auto=sim.mass=false;g.fill=false;emit('end');};
+  const caught=()=>{if(g.caughtCD>0)return;g.sus+=P.S_CAUGHT;g.caughtCD=P.CAUGHT_CD;g.offended=true;g.calmT=P.CALM;g.caught++;emit('caught');};   // 순찰 중에 수상한 짓
   g.start=()=>{
     Object.assign(sim,{nail:'C',swap:true,ridge:true,block:false,millLock:false,wind:false,broken:false,mass:false,tiltDish:10,tiltMach:10,tiltFloor:0,windPow:1});
     sim.reset();sim.powOff=Math.round(Math.random()*20-10);sim.spillAt=P.CROWD_AT;sim.apply();g.state='play';emit('start');};   // 최적 세기가 밤마다 50~70 사이로 바뀐다
@@ -181,17 +186,31 @@ function createGame(sim,mode='real'){
     g.t+=dt;
     const f=sim.st.fired-g.fired0;if(f){g.money-=f*PRICE;g.fired0=sim.st.fired;}
     const canFire=g.money>=PRICE;sim.auto=g.grip&&canFire;sim.mass=sim.auto&&g.mass;
-    if(sim.mass)g.calmT=P.CALM;else g.calmT=Math.max(0,g.calmT-dt);              // 수상한 짓을 멈추고 CALM초가 지나야 식기 시작한다
-    g.sus=Math.max(0,g.sus+(sim.mass?P.S_MASS:g.calmT>0?0:-P.S_DECAY)*dt+(sim.count[2]>=P.CROWD_AT?P.S_CROWD*dt:0));
+    const filling=g.fill&&sim.tiltFloor<CLOG_AT;
+    if(sim.mass||filling)g.calmT=P.CALM;else g.calmT=Math.max(0,g.calmT-dt);   // 수상한 짓을 멈추고 CALM초가 지나야 식기 시작한다
+    g.sus=Math.max(0,g.sus+((sim.mass?P.S_MASS:0)+(filling?P.S_FILL:0)+(g.calmT>0?0:-P.S_DECAY))*dt+(sim.count[2]>=P.CROWD_AT?P.S_CROWD*dt:0));
+    if(filling){g.water=Math.min(CLOG_AT,g.water+P.FILL_RATE*dt);                 // 위층 수조에 물을 채워 건물을 옆으로 기울인다
+      if(Math.floor(g.water+1e-9)>sim.tiltFloor){sim.tiltFloor=Math.floor(g.water+1e-9);sim.apply();emit('floor');if(sim.tiltFloor===CLOG_AT)emit('clog');}}
+    g.joltCD=Math.max(0,g.joltCD-dt);g.caughtCD=Math.max(0,g.caughtCD-dt);
+    // 직원 순찰: 발소리(예고) → 지나감 → 깨끗하면 의심이 조금 풀린다
+    if(g.patrol==='none'&&(g.patrolT-=dt)<=P.PATROL_WARN){g.patrol='warn';emit('patrolWarn');}
+    else if(g.patrol==='warn'&&(g.patrolT-=dt)<=0){g.patrol='on';g.patrolLeft=between(P.PATROL_LEN);g.offended=false;emit('patrol',{len:g.patrolLeft});}
+    else if(g.patrol==='on'){
+      if(sim.mass||filling)caught();
+      if((g.patrolLeft-=dt)<=0){g.patrol='none';g.patrolT=between(P.PATROL_GAP);
+        if(g.offended)emit('patrolEnd');else{g.sus=Math.max(0,g.sus-P.S_CLEAN);emit('patrolClean');}}}
     g.susMax=Math.max(g.susMax,g.sus);
-    g.floorCD=Math.max(0,g.floorCD-dt);g.joltCD=Math.max(0,g.joltCD-dt);
     for(const e of sim.events){
       g.events.push(e);
       if(e.t==='jack'){g.payout=e.amount;g.money+=e.amount;end('win','jack');}
     }
     sim.events.length=0;if(g.state!=='play')return;
-    if(!g.flags.wind&&sim.count[2]>=P.WIND_AT){g.flags.wind=1;schedule('wind',()=>{g.windArmed=true;});}   // 3단에 구슬이 모이면 바람 커튼을 꺼낸다
-    sim.wind=g.windArmed&&sim.count[2]>0;
+    if(!g.flags.wind&&sim.count[2]>=P.WIND_AT){g.flags.wind=1;schedule('wind',()=>{g.windArmed=true;});}   // 3단에 구슬이 오면 바람 커튼을 꺼낸다
+    if(g.windArmed){                                                               // 직원이 스위치를 쥐고 있다: 당첨 구멍에 구슬이 다가가면 반응해 분다
+      const h=DISH[2].holes[0];let near=false;for(const b of sim.dish)if(b.k===2&&Math.hypot(b.x-h.x,b.y-h.y)<P.WIND_TRIG){near=true;break;}
+      if(near){if((g.nearT+=dt)>=P.WIND_REACT)g.windT=P.WIND_HOLD;}else g.nearT=0;
+      g.windT=Math.max(0,g.windT-dt);}
+    sim.wind=g.windT>0;
     if(!g.flags.block&&g.sus>=P.T_BLOCK){g.flags.block=1;schedule('block',()=>{sim.block=true;});}
     if(!g.flags.lock&&g.sus>=P.T_LOCK){g.flags.lock=1;schedule('lock',()=>{sim.millLock=true;sim.windPow=P.WIND_BOOST;});}
     for(let i=g.warn.length-1;i>=0;i--){const w=g.warn[i];if((w.left-=dt)<=0){g.warn.splice(i,1);w.fn();emit('house',{what:w.what});}}
@@ -205,10 +224,8 @@ function createGame(sim,mode='real'){
     if(g.t>=P.NIGHT)return end('lose','closing');
     if(!canFire&&!sim.balls.length&&!sim.gk.length&&!sim.dish.length)return end('lose','broke');
   };
-  g.floorUp=()=>{if(g.state!=='play'||g.floorCD>0||sim.tiltFloor>=CLOG_AT)return false;
-    sim.tiltFloor++;sim.apply();g.sus+=P.S_FLOOR;g.calmT=P.CALM;g.floorCD=P.FLOOR_CD;emit('floor');if(sim.tiltFloor===CLOG_AT)emit('clog');return true;};
-  g.breakGate=()=>{if(g.state!=='play'||sim.broken)return false;sim.broken=true;g.sus+=P.S_BREAK;g.calmT=P.CALM;emit('broke');return true;};
-  g.jolt=()=>{if(g.state!=='play'||g.joltCD>0)return false;g.lastSpill=sim.jolt();g.sus+=P.S_JOLT;g.calmT=P.CALM;g.joltCD=P.JOLT_CD;g.jolts++;emit('jolt');return true;};
+  g.breakGate=()=>{if(g.state!=='play'||sim.broken)return false;sim.broken=true;g.sus+=P.S_BREAK;g.calmT=P.CALM;emit('broke');if(g.patrol==='on')caught();return true;};
+  g.jolt=()=>{if(g.state!=='play'||g.joltCD>0)return false;g.lastSpill=sim.jolt();g.sus+=P.S_JOLT;g.calmT=P.CALM;g.joltCD=P.JOLT_CD;g.jolts++;emit('jolt');if(g.patrol==='on')caught();return true;};
   return g;
 }
 // SIM-END

@@ -6,7 +6,7 @@ const LINES={
   gkout:'날개가 닫혀 있었다. 저 문지기부터 어떻게든 해야 한다.',
   broke:'날개 축이 휘었다. 이제 열린 채다.',
   rebroke:'다시 휘게 만들었다. 직원 눈치를 봐야 한다.',
-  floor:'위층에서 무게가 실린다. 바닥이 미세하게 기운다.',
+  floor:'위층 수조에 물이 차오른다. 바닥이 미세하게 기운다.',
   clog:'꽝 구멍 아래가 막혔다. 이제 원반에 구슬이 쌓인다.',
   stage3:'3단… 당첨 구멍이 하필 뒤쪽이다.',
   lose3:'앞으로 굴러 떨어진다. 기계 전체가 앞으로 숙여져 있다.',
@@ -16,8 +16,9 @@ const LINES={
   house_repair:'문지기가 고쳐졌다. 다시 1/3이다.',
   warn_lock:'뒤쪽이 술렁인다. 뭔가 더 걸어 올 셈이다.',
   house_lock:'풍차가 묶였다. 바람 소리도 거세졌다.',
-  warn_wind:'쉭— 3단 쪽에서 낯선 소리가 난다.',
-  house_wind:'구멍에서 바람이 나온다. 구슬이 떠밀린다.',
+  warn_wind:'3단을 보던 직원이 카운터로 돌아간다.',
+  house_wind:'카운터의 남자가 손을 어딘가에 올려 두었다.',
+  blow:'쉭— 당첨 구멍에서 바람이 뿜어져 구슬을 밀어냈다. 저 남자가 지켜보고 있다.',
   crowd20:'구슬이 쌓인다. 무게로 밀어 넣는 수밖에 없다.',
   crowd30:'원반이 구슬로 꽉 찼다. 다들 이쪽을 본다.',
   jolt:'쾅. 손바닥이 얼얼하다.',
@@ -27,12 +28,18 @@ const LINES={
   money:'군자금이 바닥을 보이기 시작한다.',
   time:'영업 종료까지 2분.',
   jack:'들어갔다—!',
+  patrolWarn:'등 뒤에서 구두 소리가 다가온다.',
+  patrol:'직원이 바로 뒤를 지나간다. 숨을 고른다.',
+  caught:'눈이 마주쳤다. 젠장.',
+  patrolClean:'…아무것도 못 봤다. 지나갔다.',
+  plug:'쿵. 꽝 구멍 하나가 막혔다.',
+  plugAll:'3단 꽝 구멍이 전부 막혔다. 이제 쌓인다.',
 };
 const END={win:['잭팟','구슬이 쏟아지는 소리가 홀을 덮는다. 오늘 밤은 내가 이겼다.'],
   kicked:['퇴장','어깨에 손이 얹혔다. 끝이다. 기계는 아무 일 없었다는 듯 빛난다.'],
   closing:['영업 종료','조명이 하나씩 꺼진다. 원반 위에 남은 구슬이 그대로 멈춰 있다.'],
   broke:['빈털터리','주머니가 비었다. 마지막 구슬이 못 사이로 사라진다.']};
-const WARN_TXT={block:'블록 센서 가동 3초 전',lock:'풍차 고정 · 바람 강화 3초 전',wind:'바람 커튼 3초 전'};
+const WARN_TXT={block:'블록 센서 가동 3초 전',lock:'풍차 고정 · 바람 강화 3초 전',wind:'바람 커튼 준비 3초 전'};
 
 // 독백: 한 줄씩 타자 치듯
 const said=new Set(),monoQ=[];let monoFull='',monoShown=0,monoT=0;
@@ -64,9 +71,13 @@ function audioInit(){
 function blip(f,dur,type,vol,slide){if(!AC||muted)return;const t=AC.currentTime,o=AC.createOscillator(),g=AC.createGain();
   o.type=type;o.frequency.setValueAtTime(f,t);if(slide)o.frequency.exponentialRampToValueAtTime(slide,t+dur);
   g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(.001,t+dur);o.connect(g).connect(master);o.start(t);o.stop(t+dur);}
+function stepSnd(pan){if(!AC||muted)return;const t=AC.currentTime,o=AC.createOscillator(),g=AC.createGain(),p=AC.createStereoPanner?AC.createStereoPanner():null;   // 발소리: 왼쪽에서 오른쪽으로 지나간다
+  o.type='sine';o.frequency.setValueAtTime(110,t);o.frequency.exponentialRampToValueAtTime(55,t+.09);g.gain.setValueAtTime(.35,t);g.gain.exponentialRampToValueAtTime(.001,t+.12);
+  let n=o.connect(g);if(p){p.pan.value=pan;n=n.connect(p);}n.connect(master);o.start(t);o.stop(t+.13);}
 const SFX={tick:()=>blip(2600+Math.random()*700,.025,'square',.025),thump:()=>blip(95,.35,'sine',.7,38),drop:()=>blip(320,.14,'sine',.06,140),
   crack:()=>blip(1800,.08,'sawtooth',.08,300),creak:()=>blip(70,.6,'sawtooth',.06,55),pulse:()=>blip(52,.22,'sine',.45),
   warn:()=>{blip(880,.12,'square',.07);setTimeout(()=>blip(880,.12,'square',.07),170);},
+  thunk:()=>{blip(150,.28,'square',.14,60);blip(75,.4,'sine',.4,40);},step:stepSnd,
   jack:()=>[523,659,784,1047,1319].forEach((f,i)=>setTimeout(()=>blip(f,.5,'triangle',.18),i*110)),
   jackBig:()=>{[523,659,784,1047,784,1047,1319,1568].forEach((f,i)=>setTimeout(()=>blip(f,.45,'triangle',.18),i*110));
     setTimeout(()=>[523,659,784,1047].forEach(f=>blip(f,1.8,'sine',.1)),950);
@@ -89,8 +100,9 @@ dial.addEventListener('keydown',e=>{const d={ArrowLeft:-2,ArrowDown:-2,ArrowRigh
 let actT=0,joltFx=0,gateFx=0,paused=false,celebT=0,bursts=0,burstT=0,jackT=0,jackDur=1,againMode='real';
 // 잭팟 연출: 당첨 구멍에서 솟구치는 구슬 분수 + 금액 카운트업
 const parts=[];
-function burst(n){const d=DISH[2],h=d.holes[0],x=d.x+h.x,y=d.y+h.y*Q;
-  for(let i=0;i<n;i++){const a=-Math.PI/2+(Math.random()-.5)*2.4,v=160+Math.random()*280;parts.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,life:1.4+Math.random()});}}
+const plugFx=[];
+function burstAt(x,y,n,v0=160,vr=280){for(let i=0;i<n;i++){const a=-Math.PI/2+(Math.random()-.5)*2.4,v=v0+Math.random()*vr;parts.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,life:1.4+Math.random()});}}
+function burst(n){const d=DISH[2],h=d.holes[0];burstAt(d.x+h.x,d.y+h.y*Q,n);}
 function jackTick(dt){if($('jack').hidden||!game.payout)return;jackT+=dt;const p=Math.min(1,jackT/jackDur),e=1-Math.pow(1-p,3);
   $('jackAmt').textContent=yenTxt(game.payout*e);}
 function act(txt){const a=$('act');a.textContent=txt;a.hidden=false;actT=1.4;}
@@ -98,9 +110,7 @@ function setGrip(on){game.grip=on;$('grip').setAttribute('aria-pressed',on);$('g
 function setMass(on){if(on&&!game.mass&&game.state==='play'){if(!game.grip)setGrip(true);act(game.money<PRICE?'군자금이 없다':'물량 · 초당 20발을 쏟아붓는다 · 누르는 동안 의심 +0.7/초');}game.mass=on;$('mass').classList.toggle('held',on);}
 function toggleGrip(){setGrip(!game.grip);act(game.grip?'핸들을 잡았다 · 분당 100발 발사':'핸들을 놓았다 · 발사 멈춤 (군자금을 아낀다)');}
 function doJolt(){if(game.jolt()){joltFx=.6;act(game.lastSpill?`쾅! 3단 앞쪽 구슬 ${game.lastSpill}개가 넘쳐 나가고 나머지는 뒤로 튄다 · 의심 +3`:'쾅! 원반 위 구슬이 뒤로 튄다 · 의심 +3');}else if(game.state==='play')act(`두드리기는 ${game.joltCD.toFixed(1)}초 뒤에 다시 된다`);}
-function doFloor(){const n0=sim.tiltFloor;
-  if(game.floorUp()){const n=sim.tiltFloor;act(n>=CLOG_AT?`건물 ${n}/7 · 꽝 배출로 역류 시작 — 꽝 구멍마다 노란 게이지가 차오른다 · 의심 +2`:`건물 ${n}/7 · ${CLOG_AT-n}칸 더 기울이면 꽝 배출로가 막힌다 · 의심 +2`);}
-  else if(game.state==='play')act(n0>=CLOG_AT?'건물은 이미 7칸, 더 기울일 필요 없다':`건물은 ${Math.ceil(game.floorCD)}초 뒤에 더 기울일 수 있다`);}
+function setFill(on){if(on&&!game.fill&&game.state==='play'){if(sim.tiltFloor>=CLOG_AT){act('건물은 이미 7칸, 더 기울일 필요 없다');return;}act('위층 수조에 물을 채운다 · 누르는 동안 의심 +0.4/초 · 발소리가 나면 손을 뗀다');}game.fill=on;$('floor').classList.toggle('held',on);}
 function doBreak(){if(game.breakGate()){gateFx=1.2;act('문지기 날개를 열린 채 고정했다 · IN에 들어간 구슬이 전부 원반으로 · 의심 +10');}else if(game.state==='play')act('문지기는 이미 부서져 있다');}
 $('grip').onclick=toggleGrip;
 const massBtn=$('mass');
@@ -108,19 +118,22 @@ massBtn.addEventListener('pointerdown',e=>{massBtn.setPointerCapture(e.pointerId
 for(const ev of['pointerup','pointercancel','lostpointercapture'])massBtn.addEventListener(ev,()=>setMass(false));
 massBtn.addEventListener('contextmenu',e=>e.preventDefault());
 $('jolt').onclick=doJolt;
-$('floor').onclick=doFloor;
+const fillBtn=$('floor');
+fillBtn.addEventListener('pointerdown',e=>{fillBtn.setPointerCapture(e.pointerId);setFill(true);});
+for(const ev of['pointerup','pointercancel','lostpointercapture'])fillBtn.addEventListener(ev,()=>setFill(false));
+fillBtn.addEventListener('contextmenu',e=>e.preventDefault());
 $('break').onclick=doBreak;
 $('mute').onclick=()=>{muted=!muted;if(master)master.gain.value=muted?0:.6;$('mute').setAttribute('aria-pressed',muted);$('mute').textContent=muted?'소리 끔':'소리 켬';};
-$('help').onclick=()=>{if(game.state==='play'){paused=true;setMass(false);$('sit').textContent='계속하기';$('sitPractice').hidden=true;}$('brief').hidden=false;$('sit').focus();};
-addEventListener('blur',()=>setMass(false));
-document.addEventListener('visibilitychange',()=>{if(document.hidden)setMass(false);});
+$('help').onclick=()=>{if(game.state==='play'){paused=true;setMass(false);setFill(false);$('sit').textContent='계속하기';$('sitPractice').hidden=true;}$('brief').hidden=false;$('sit').focus();};
+addEventListener('blur',()=>{setMass(false);setFill(false);});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){setMass(false);setFill(false);}});
 addEventListener('keydown',e=>{
   if(game.state!=='play'||paused||e.repeat)return;
   const k=e.key.toLowerCase();
   if(e.code==='Space'){e.preventDefault();toggleGrip();}
-  else if(k==='m')setMass(true);else if(k==='j')doJolt();else if(k==='f')doFloor();else if(k==='b')doBreak();
+  else if(k==='m')setMass(true);else if(k==='j')doJolt();else if(k==='f')setFill(true);else if(k==='b')doBreak();
 });
-addEventListener('keyup',e=>{if(e.key.toLowerCase()==='m')setMass(false);});
+addEventListener('keyup',e=>{const k=e.key.toLowerCase();if(k==='m')setMass(false);if(k==='f')setFill(false);});
 
 // 시작·끝
 const fmtT=s=>`${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
@@ -132,7 +145,7 @@ function begin(mode){
   game=createGame(sim,mode||game.mode);said.clear();monoQ.length=0;monoFull='';$('mono').textContent='';
   $('brief').hidden=true;$('end').hidden=true;$('jack').hidden=true;$('alert').hidden=true;$('act').hidden=true;
   paused=false;$('sit').textContent='본게임으로 앉는다';$('sitPractice').hidden=false;joltFx=gateFx=0;
-  celebT=bursts=0;parts.length=0;$('view').classList.remove('gold');$('lcdBox').classList.remove('flash');
+  celebT=bursts=0;parts.length=0;plugFx.length=0;$('shadow').className='patrol-shadow';$('floor').classList.remove('held');$('view').classList.remove('gold');$('lcdBox').classList.remove('flash');
   game.start();setGrip(true);setMass(false);renderStatic();
 }
 function showEnd(){
@@ -154,7 +167,8 @@ $('modes').onclick=()=>{$('end').hidden=true;$('brief').hidden=false;$('sit').fo
 function goalText(){
   const g=game,n3=sim.count[2];if(g.state!=='play')return '자리에 앉으면 시작한다';
   const pl=DISH.map(d=>d.holes.filter(h=>!h.win&&h.fill>=CLOG_CAP).length);let t;
-  if(sim.tiltFloor<CLOG_AT)t=`건물을 7칸까지 기울여 꽝 배출로를 막는다 (${sim.tiltFloor}/7) · 그동안 다이얼로 IN 적중을 맞춘다`;
+  if(g.patrol!=='none')return g.patrol==='warn'?'발소리가 다가온다 — 물량·물 채우기·두드리기를 지금 멈춘다':'직원이 지나가는 중 — 가만히 있으면 의심이 조금 풀린다';
+  if(sim.tiltFloor<CLOG_AT)t=`물 채우기를 누르고 있어 건물을 7칸까지 기울인다 (${g.water.toFixed(1)}/7) · 그동안 다이얼로 IN 적중을 맞춘다`;
   else if(!sim.broken)t='문지기를 부숴 IN을 통과한 구슬이 전부 원반으로 가게 한다';
   else if(pl[2]<4)t=`물량으로 꽝 구멍을 메운다 · 3단 막힘 ${pl[2]}/4 (1단 ${pl[0]}/2 · 2단 ${pl[1]}/3) · 의심도를 보며 끊어서`;
   else if(n3<15)t=`3단에 구슬을 15개까지 모은다 (지금 ${n3}/20)`;
@@ -169,6 +183,9 @@ function arrowUp(x,y,len){ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x,y-len);ct
 function drawFx(dt){
   for(let i=parts.length-1;i>=0;i--){const p=parts[i];p.vy+=520*dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.life-=dt;
     if(p.life<=0||p.y>H+10){parts.splice(i,1);continue;}ctx.globalAlpha=Math.min(1,p.life*1.5);ball(p.x,p.y);}
+  ctx.globalAlpha=1;
+  for(let i=plugFx.length-1;i>=0;i--){const f=plugFx[i];f.t+=dt;if(f.t>.8){plugFx.splice(i,1);continue;}const r=HOLE+4+f.t*30;   // 꽝 구멍이 막힐 때 퍼지는 금빛 고리
+    ctx.globalAlpha=1-f.t/.8;ctx.strokeStyle=C.amber;ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(f.x,f.y,r,r*Q+2,0,0,7);ctx.stroke();}
   ctx.globalAlpha=1;
   if(sim.clogged()){ctx.lineWidth=2.5;ctx.strokeStyle=C.amber;
     for(const d of DISH)for(const h of d.holes)if(!h.win&&h.fill>0&&h.fill<CLOG_CAP){
@@ -188,7 +205,14 @@ function handleEvents(){
       case'lose':SFX.drop();if(e.k===2)say('lose3');break;
       case'gkout':say('gkout');break;
       case'broke':popSus(game.P.S_BREAK);SFX.crack();if(said.has('broke'))say('rebroke',true);else say('broke');break;
-      case'floor':popSus(game.P.S_FLOOR);SFX.creak();say('floor');break;
+      case'floor':SFX.creak();say('floor');act(sim.tiltFloor>=CLOG_AT?'건물 7/7 · 꽝 배출로 역류 시작 — 꽝 구멍마다 노란 게이지가 차오른다':`건물 ${sim.tiltFloor}/7 · ${CLOG_AT-sim.tiltFloor}칸 더 기울이면 꽝 배출로가 막힌다`);break;
+      case'patrolWarn':alertMsg('발소리 — 직원이 온다. 손을 뗀다',true);say('patrolWarn',true);stepT=0;break;
+      case'patrol':{patrolLen=e.len;const sh=$('shadow');sh.style.setProperty('--dur',e.len+'s');sh.className='patrol-shadow';void sh.offsetWidth;sh.className='patrol-shadow walk';say('patrol',true);break;}
+      case'caught':popSus(game.P.S_CAUGHT);SFX.crack();alertMsg('들켰다! 의심 +'+game.P.S_CAUGHT,true);shakeT=.25;$('view').classList.add('shake');say('caught',true);break;
+      case'patrolClean':popSus(-game.P.S_CLEAN);act('직원이 그냥 지나갔다 · 의심 −'+game.P.S_CLEAN);say('patrolClean',true);break;
+      case'plug':{SFX.thunk();const d=DISH[e.k],x=d.x+e.x,y=d.y+e.y*Q;plugFx.push({x,y,t:0});burstAt(x,y,10,60,120);
+        const n=d.holes.filter(h=>!h.win&&h.fill>=CLOG_CAP).length,m=d.n-1;act(`${e.k+1}단 꽝 구멍 하나가 막혔다 (${n}/${m})`);say('plug');
+        if(e.k===2&&n===m){alertMsg('3단 꽝 구멍 전부 막힘 — 이제 쌓인다!');say('plugAll',true);}break;}
       case'clog':say('clog');alertMsg('꽝 배출로 역류 시작');break;
       case'warn':SFX.warn();alertMsg('⚠ '+WARN_TXT[e.what]);say('warn_'+e.what);break;
       case'house':say('house_'+e.what,e.what==='repair');if(e.what==='repair')alertMsg('문지기가 고쳐졌다',true);break;
@@ -208,7 +232,7 @@ function handleEvents(){
   game.events.length=0;
 }
 
-function popSus(n){const p=document.createElement('span');p.className='pop';p.textContent='+'+n;$('pops').append(p);setTimeout(()=>p.remove(),950);}
+function popSus(n){const p=document.createElement('span');p.className='pop'+(n<0?' down':'');p.textContent=(n<0?'−':'+')+Math.abs(n);$('pops').append(p);setTimeout(()=>p.remove(),950);}
 function lamp(id,cls,txt){const e=$(id);e.className='lamp'+(cls?' '+cls:'');if(txt)e.textContent=txt;}
 let pulseT=0;
 function updateUI(dt){
@@ -223,13 +247,14 @@ function updateUI(dt){
   lamp('L-wind',sim.wind?'on':warned('wind')?'warn':'',g.windArmed&&!sim.wind?'바람 커튼 대기':'바람 커튼');
   lamp('L-repair',g.repairing?'on':'',g.repairing?`문지기 수리 ${Math.ceil(g.repairT)}초`:'문지기 수리');
   lamp('L-gate',sim.broken?'mine':'',sim.broken?'문지기 고장 냄':'문지기 정상');
+  lamp('L-patrol',g.patrol==='on'?'on':g.patrol==='warn'?'warn':'',g.patrol==='on'?'직원 순찰 중':g.patrol==='warn'?'발소리':'순찰');
   lamp('L-floor',sim.tiltFloor>=CLOG_AT?'mine':'',`건물 ${sim.tiltFloor}/7`);
   $('jolt').disabled=!play||g.joltCD>0;$('joltCd').style.width=(g.joltCD/P.JOLT_CD*100)+'%';
-  $('floor').disabled=!play||g.floorCD>0||sim.tiltFloor>=CLOG_AT;$('floorCd').style.width=(g.floorCD/P.FLOOR_CD*100)+'%';
+  $('floor').disabled=!play||sim.tiltFloor>=CLOG_AT;$('water').style.height=(g.water/CLOG_AT*100)+'%';
   $('break').disabled=!play||sim.broken;
   $('mass').disabled=!play||g.money<PRICE;
   $('joltSub').textContent=g.joltCD>0?`${g.joltCD.toFixed(1)}초 뒤`:'뒤로 튕김 · +3';
-  $('floorSub').textContent=sim.tiltFloor>=CLOG_AT?'역류 중':g.floorCD>0?`${Math.ceil(g.floorCD)}초 뒤 · ${sim.tiltFloor}/7`:`${sim.tiltFloor}/7 · +2`;
+  $('floorSub').textContent=sim.tiltFloor>=CLOG_AT?'역류 중':g.fill?`채우는 중 ${g.water.toFixed(1)}/7`:`${g.water.toFixed(1)}/7 · +0.4/초`;
   $('breakSub').textContent=sim.broken?(g.repairing?`수리 ${Math.ceil(g.repairT)}초 전`:'부서짐'):'날개 고정 · +10';
   $('massSub').textContent=sim.mass?'쏟아붓는 중':g.money<PRICE?'군자금 없음':'초당 20발 · +0.7/초';
   $('goal').textContent=goalText();$('goalBox').classList.toggle('danger',play&&sim.count[2]>=18);
@@ -242,6 +267,7 @@ function updateUI(dt){
   if(play){
     if(sim.st.forest)say('forest');
     if(g.sus>=60)say('sus60');
+    if(sim.wind)say('blow');
     if(sim.count[2]>=20)say('crowd20');
     if(sim.count[2]>=30)say('crowd30');
     if(g.money<(P.START-P.PREP)*.3)say('money');
@@ -249,6 +275,7 @@ function updateUI(dt){
   }
   $('call').hidden=!(g.callT>0&&play);
   if(g.callT>0&&play){$('callN').textContent=Math.ceil(g.callT);$('callSub').textContent=sim.count[2]>=P.CROWD_AT?'3단이 20개 이상이면 의심이 안 내려간다 · 두드려서 줄여라':'물량·두드리기를 멈추고 70 아래로';if(!paused&&(pulseT-=dt)<=0){SFX.pulse();pulseT=1;}}
+  else if(play&&!paused&&g.sus>=60&&(pulseT-=dt)<=0){SFX.pulse();pulseT=1.3-(Math.min(g.sus,100)-60)/40*.8;}   // 의심이 높을수록 심장이 빨리 뛴다
 }
 
 // 원반 확대: 폰에서는 기본으로 켠다. 끄면 3단에 구슬이 있을 때만 자동으로 다가간다
@@ -263,7 +290,7 @@ Object.assign(sim,{nail:'C',swap:true});sim.apply();
 setPower(60);renderStatic();
 document.fonts?.ready.then(renderStatic);
 
-let last=performance.now(),acc=0,slow=0,shakeT=0,firedSeen=0,uiT=0;
+let last=performance.now(),acc=0,slow=0,shakeT=0,firedSeen=0,uiT=0,stepT=0,patrolLen=8;
 function frame(t){
   const real=Math.min(.05,(t-last)/1000);last=t;
   const k=slow>0?.35:1;slow=Math.max(0,slow-real);
@@ -279,6 +306,8 @@ function frame(t){
   if(actT>0&&(actT-=real)<=0)$('act').hidden=true;
   if(alertT>0&&(alertT-=real)<=0)$('alert').hidden=true;
   if(shakeT>0&&(shakeT-=real)<=0)$('view').classList.remove('shake');
+  if(game.state==='play'&&!paused&&game.patrol!=='none'&&(stepT-=real)<=0){   // 순찰 발소리
+    const pr=game.patrol==='warn'?-1+(1-Math.max(0,game.patrolT)/game.P.PATROL_WARN)*.4:-.6+(1-game.patrolLeft/patrolLen)*1.6;SFX.step(Math.max(-1,Math.min(1,pr)));stepT=.45;}
   if((uiT-=real)<=0){updateUI(.1);uiT=.1;}
   requestAnimationFrame(frame);
 }
