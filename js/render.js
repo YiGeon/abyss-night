@@ -19,7 +19,7 @@ function surfH(k,x,y){let h=bowlH(Math.hypot(x,y));
 
 const R=(()=>{
   const noop=()=>{};
-  const api={ok:false,snap:noop,setLean:noop,shake:noop,patrol:noop,plug:noop,burst:noop,jackpot:noop,jolt:noop,gateFlash:noop,focus:noop,reset:noop,draw:noop,rebuild:noop};
+  const api={ok:false,setPip:noop,snap:noop,setLean:noop,shake:noop,patrol:noop,plug:noop,burst:noop,jackpot:noop,jolt:noop,gateFlash:noop,focus:noop,reset:noop,draw:noop,rebuild:noop};
   const fail=msg=>{const a=document.createElement('div');a.className='alert red';a.style.top='40%';a.textContent=msg;$('view').append(a);};
   if(!window.THREE){fail('3D 라이브러리를 불러오지 못했습니다. 인터넷 연결을 확인해 주세요.');return api;}
   let renderer;
@@ -169,7 +169,7 @@ const R=(()=>{
   const pipCam=new T.OrthographicCamera(-215,215,215,-215,1,3000);pipCam.position.set(0,443,1500);pipCam.layers.enable(1);scene.add(pipCam);
   const pipBalls=new T.InstancedMesh(new T.SphereGeometry(BR,8,6),mc('#ffffff'),700);pipBalls.layers.set(1);pipBalls.instanceMatrix.setUsage(T.DynamicDrawUsage);pipBalls.frustumCulled=false;machine.add(pipBalls);
   let np=0,pipK=2.4;const putPip=(x,y)=>{if(np>=700)return;const a=pipBalls.instanceMatrix.array,o=np*16;a.fill(0,o,o+16);a[o]=a[o+5]=a[o+10]=pipK;a[o+12]=x;a[o+13]=y;a[o+14]=BR*pipK;a[o+15]=1;np++;};
-  const pipBox=$('pip');pipBox.onclick=()=>$('zoom').click();
+  const pipBox=$('pip');let pipOpenR=true;   // 접고 펴기는 ui.js가 R.setPip으로 알려 준다
   const sil=new T.Mesh(new T.PlaneGeometry(70,140),new T.MeshBasicMaterial({map:silTex,transparent:true,depthWrite:false,depthTest:false,fog:false}));sil.renderOrder=10;sil.visible=false;sil.layers.set(2);cam.layers.enable(2);cam.add(sil);
 
   // ── 카메라 리그
@@ -215,6 +215,7 @@ const R=(()=>{
   api.jolt=()=>{camS.joltZ=-6;api.shake(.25,.8);for(let k=0;k<3;k++)ring(V(STEP[k].X,STEP[k].Y+bowlH(DR)+RIM_H+1,STEP[k].Z),true,C.good,LIP,LIP+14,.5);};
   api.gateFlash=()=>ring(bw(GATE.x,GK.y+3,8),false,C.good,24,34,1.2);
   api.focus=sec=>{camS.focusT=sec;};
+  api.setPip=on=>{pipOpenR=on;};
   api.snap=()=>{const f=frame();camS.eye.copy(f.eye);camS.look.copy(f.look);camS.fov=f.fov;};   // 카메라를 목표 시점으로 바로 옮긴다
   api.reset=()=>{parts.length=0;ghosts.length=0;camS.jackT=0;camS.patrolT=camS.patrolLen=0;sil.visible=false;camS.expo=1;for(const r of rings)r.m.visible=false;};
   api.rebuild=()=>{redraw(boardTex,boardArt);buildNails();for(const d of dishes){d.sig='';}
@@ -270,7 +271,8 @@ const R=(()=>{
     updateCam(rdt,t);
     const cw=cv.clientWidth,chh=cv.clientHeight;renderer.setScissorTest(false);renderer.setViewport(0,0,cw,chh);
     renderer.render(scene,cam);
-    const pipOn=camS.lean&&camS.jackT<=0&&game.state==='play';pipBox.hidden=!pipOn;
+    const pipShow=camS.lean&&camS.jackT<=0&&game.state==='play',pipOn=pipShow&&pipOpenR;pipBox.hidden=!pipShow;pipBox.classList.toggle('collapsed',!pipOpenR);
+    if(pipShow&&!pipOpenR)pipBox.style.cssText=`right:${(cv.parentElement.parentElement.clientWidth-cv.offsetLeft-cw)+8}px;top:${cv.offsetTop+44}px`;   // 접힘: 같은 자리에 작은 버튼만
     if(pipOn){const pw=Math.round(Math.min(220,Math.max(104,cw*(cw<chh?.32:.24)))),ph=pw,px=cw-pw-8,pt=44;   // 오른쪽 위, 확대 버튼 아래
       const a=pw/ph,H2=215,W2=215;if(a>W2/H2){pipCam.left=-H2*a;pipCam.right=H2*a;pipCam.top=H2;pipCam.bottom=-H2;}else{pipCam.left=-W2;pipCam.right=W2;pipCam.top=W2/a;pipCam.bottom=-W2/a;}
       pipCam.updateProjectionMatrix();pipK=Math.min(3,Math.max(1,5/(2*BR*ph/430)));

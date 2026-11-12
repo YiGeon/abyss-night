@@ -125,14 +125,14 @@ $('help').onclick=()=>{if(game.state==='play'){paused=true;setMass(false);setFil
 addEventListener('blur',()=>{setMass(false);setFill(false);});
 document.addEventListener('visibilitychange',()=>{if(document.hidden){setMass(false);setFill(false);}});
 // 단축키: 화면 버튼 순서대로 왼손 홈 줄 A S D F, 다이얼 Q/E(←/→), 발사 Space. 한글 입력 상태에서도 되도록 물리 키 위치(e.code)로 판정
-const KEYS={KeyA:'mass',KeyS:'jolt',KeyD:'fill',KeyF:'break',KeyQ:'down',KeyE:'up',ArrowLeft:'down',ArrowRight:'up'};
+const KEYS={KeyA:'mass',KeyS:'jolt',KeyD:'fill',KeyF:'break',KeyQ:'down',KeyE:'up',ArrowLeft:'down',ArrowRight:'up',KeyW:'pip',KeyV:'view'};   // W 못 구역 접기/펴기, V 전체 보기
 addEventListener('keydown',e=>{
   if(game.state!=='play'||paused)return;
   const a=KEYS[e.code];
   if(a==='down'||a==='up'){if(e.target!==dial){e.preventDefault();setPower(sim.power+(a==='up'?2:-2));}return;}   // 누르고 있으면 계속 돈다
   if(e.repeat)return;
   if(e.code==='Space'){e.preventDefault();toggleGrip();}
-  else if(a==='mass')setMass(true);else if(a==='jolt')doJolt();else if(a==='fill')setFill(true);else if(a==='break')doBreak();
+  else if(a==='mass')setMass(true);else if(a==='jolt')doJolt();else if(a==='fill')setFill(true);else if(a==='break')doBreak();else if(a==='pip')setPip(!pipOpen);else if(a==='view')$('zoom').click();
 });
 addEventListener('keyup',e=>{const a=KEYS[e.code];if(a==='mass')setMass(false);if(a==='fill')setFill(false);});
 
@@ -262,7 +262,11 @@ function updateUI(dt){
 
 // 원반 확대: 폰에서는 기본으로 켠다. 끄면 3단에 구슬이 있을 때만 자동으로 다가간다
 let zoomNear=true;   // 기본은 원판 확대 + 오른쪽 위 못 구역 미니뷰
-function setZoom(on){zoomNear=on;$('zoom').setAttribute('aria-pressed',on);$('zoom').textContent=on?'판 전체 보기':'원반 확대';}
+function setZoom(on){zoomNear=on;$('zoom').setAttribute('aria-pressed',!on);$('zoomTxt').textContent=on?'전체 보기':'원반 확대';}
+// 못 구역 미니뷰 접기/펴기: 클릭·탭 또는 W. 이 브라우저에 기억한다
+let pipOpen=true;try{pipOpen=localStorage.getItem('abyss.pip')!=='0';}catch(e){}
+function setPip(on){pipOpen=on;R.setPip(on);const b=$('pip');b.setAttribute('aria-expanded',on);$('pipArrow').textContent=on?'▴':'▾';try{localStorage.setItem('abyss.pip',on?'1':'0');}catch(e){}}
+$('pip').onclick=()=>setPip(!pipOpen);setPip(pipOpen);
 $('zoom').onclick=()=>{setZoom(!zoomNear);uiT=0;};
 setZoom(zoomNear);
 
