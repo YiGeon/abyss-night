@@ -268,6 +268,7 @@ let pipOpen=true;try{pipOpen=localStorage.getItem('abyss.pip')!=='0';}catch(e){}
 function setPip(on){pipOpen=on;R.setPip(on);const b=$('pip');b.setAttribute('aria-expanded',on);$('pipArrow').textContent=on?'▴':'▾';try{localStorage.setItem('abyss.pip',on?'1':'0');}catch(e){}}
 $('pip').onclick=()=>setPip(!pipOpen);setPip(pipOpen);
 $('zoom').onclick=()=>{setZoom(!zoomNear);uiT=0;};
+new ResizeObserver(()=>{$('zoom').style.top=(cv.offsetTop+8)+'px';}).observe($('view'));   // 전체 보기 버튼은 잭팟 LCD 아래, 3D 화면 오른쪽 위 모서리에(모바일에서 금액과 겹치지 않게)
 setZoom(zoomNear);
 
 // 시작 화면에서도 오늘 밤의 판(못 C + 바꾼 봉)을 보여 준다
