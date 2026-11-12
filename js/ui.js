@@ -261,7 +261,7 @@ function updateUI(dt){
 }
 
 // 원반 확대: 폰에서는 기본으로 켠다. 끄면 3단에 구슬이 있을 때만 자동으로 다가간다
-let zoomNear=matchMedia('(max-width:520px)').matches;
+let zoomNear=true;   // 기본은 원판 확대 + 오른쪽 위 못 구역 미니뷰
 function setZoom(on){zoomNear=on;$('zoom').setAttribute('aria-pressed',on);$('zoom').textContent=on?'판 전체 보기':'원반 확대';}
 $('zoom').onclick=()=>{setZoom(!zoomNear);uiT=0;};
 setZoom(zoomNear);

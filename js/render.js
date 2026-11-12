@@ -110,9 +110,12 @@ const R=(()=>{
     let gr=g.createRadialGradient(0,0,4,0,0,DR);gr.addColorStop(0,'#2a2738');gr.addColorStop(.4,'#6b6f86');gr.addColorStop(.85,'#d9dce6');gr.addColorStop(1,'#8b90a6');
     g.fillStyle=gr;g.beginPath();g.arc(0,0,LIP,0,7);g.fill();
     g.lineWidth=2.5;g.strokeStyle=C.gold;g.beginPath();g.arc(0,0,DR,0,7);g.stroke();
+    const w=d.holes[0];gr=g.createRadialGradient(w.x,w.y,HOLE*.5,w.x,w.y,HOLE*2.4);gr.addColorStop(0,'rgba(255,70,95,.95)');gr.addColorStop(.55,'rgba(227,50,74,.45)');gr.addColorStop(1,'rgba(227,50,74,0)');
+    g.fillStyle=gr;g.beginPath();g.arc(w.x,w.y,HOLE*2.4,0,7);g.fill();   // 당첨 구멍 둘레 빛(표면에 칠해 입체 고리처럼 깨지지 않게)
     for(const h of d.holes){gr=g.createRadialGradient(h.x,h.y-1.5,1,h.x,h.y,HOLE);gr.addColorStop(0,'#000');gr.addColorStop(.75,'#05030a');gr.addColorStop(1,'#3a3550');
       g.fillStyle=gr;g.beginPath();g.arc(h.x,h.y,HOLE,0,7);g.fill();
       if(!h.win&&h.fill>0&&h.fill<CLOG_CAP){g.strokeStyle=C.amber;g.lineWidth=1.8;g.beginPath();g.arc(h.x,h.y,HOLE-1.6,-Math.PI/2,-Math.PI/2+h.fill/CLOG_CAP*Math.PI*2);g.stroke();}}
+    g.strokeStyle='#ff4a63';g.lineWidth=1.8;g.beginPath();g.arc(w.x,w.y,HOLE+.7,0,7);g.stroke();
   };}
   const dishes=DISH.map((d,k)=>{
     const grp=new T.Group();grp.position.set(STEP[k].X,STEP[k].Y,STEP[k].Z);
@@ -122,15 +125,11 @@ const R=(()=>{
     const pos=geo.attributes.position,uv=geo.attributes.uv;for(let i=0;i<pos.count;i++){uv.setXY(i,pos.getX(i)/(2*LIP)+.5,1-(pos.getZ(i)/(2*LIP)+.5));}
     const tex=canvasTex(TEX,TEX,dishArt(k));
     const bowl=new T.Mesh(geo,mc('#ffffff',{map:tex,side:T.DoubleSide}));
-    const bump=new T.Mesh(new T.SphereGeometry(BUMP,20,10,0,Math.PI*2,0,Math.PI/2),mc('#f0f2f8'));
+    const bump=new T.Mesh(new T.SphereGeometry(BUMP-.5,24,10,0,Math.PI*2,0,Math.PI/2),mc(C.gold));bump.scale.y=.45;   // 가운데 둔덕: 구슬과 헷갈리지 않게 납작한 금색 돔
     const lip=new T.Mesh(new T.TorusGeometry(LIP,1.6,6,72).rotateX(Math.PI/2).translate(0,top+RIM_H,0),mc(C.gold));
-    const win=d.holes[0],torus=new T.Mesh(new T.TorusGeometry(HOLE+.3,.9,6,28).rotateX(Math.PI/2),basic(C.crimson));
-    torus.position.set(win.x,surfH(k,win.x,win.y)+.4,win.y);
-    const glow=new T.Sprite(new T.SpriteMaterial({map:glowTex,color:new T.Color(C.crimson),blending:T.AdditiveBlending,depthWrite:false,transparent:true,opacity:.55}));
-    glow.scale.set(26,26,1);glow.position.copy(torus.position).y+=1.5;
     const ped=new T.Mesh(new T.BoxGeometry(2*LIP+6,STEP[k].Y-6,2*LIP+4),basic('#1d1533'));ped.position.set(0,-(STEP[k].Y-6)/2-6,0);
     const trim=new T.Mesh(new T.BoxGeometry(2*LIP+6,2,2),mc(C.gold));trim.position.set(0,-6,LIP+4);
-    grp.add(bowl,bump,lip,torus,glow,ped,trim);
+    grp.add(bowl,bump,lip,ped,trim);
     const lab=textSprite(`${k+1}단`,`1/${d.n}`);lab.position.set(-(LIP+30),top+6,0);grp.add(lab);
     machine.add(grp);return{grp,tex,sig:'',k};});
   function textSprite(a,b){const t=canvasTex(256,128,g=>{g.textAlign='center';g.font=`400 56px ${FD}`;g.fillStyle=C.fg;g.fillText(a,128,58);g.font=`700 40px ${FB}`;g.fillStyle=C.amber;g.fillText(b,128,112);});
@@ -166,7 +165,12 @@ const R=(()=>{
   const parts=[],ghosts=[];
   const silTex=canvasTex(128,256,g=>{let gr=g.createRadialGradient(64,58,4,64,58,34);gr.addColorStop(0,'rgba(4,2,8,.95)');gr.addColorStop(1,'rgba(4,2,8,0)');g.fillStyle=gr;g.fillRect(0,0,128,256);
     gr=g.createRadialGradient(64,175,10,64,175,74);gr.addColorStop(0,'rgba(4,2,8,.92)');gr.addColorStop(1,'rgba(4,2,8,0)');g.fillStyle=gr;g.fillRect(0,0,128,256);});
-  const sil=new T.Mesh(new T.PlaneGeometry(70,140),new T.MeshBasicMaterial({map:silTex,transparent:true,depthWrite:false,depthTest:false,fog:false}));sil.renderOrder=10;sil.visible=false;cam.add(sil);
+  // ── 못 구역 미니뷰(원판 확대 중 오른쪽 위): 정면 직교 카메라 + 미니뷰에서만 보이는 큰 구슬
+  const pipCam=new T.OrthographicCamera(-215,215,215,-215,1,3000);pipCam.position.set(0,443,1500);pipCam.layers.enable(1);scene.add(pipCam);
+  const pipBalls=new T.InstancedMesh(new T.SphereGeometry(BR,8,6),mc('#ffffff'),700);pipBalls.layers.set(1);pipBalls.instanceMatrix.setUsage(T.DynamicDrawUsage);pipBalls.frustumCulled=false;machine.add(pipBalls);
+  let np=0,pipK=2.4;const putPip=(x,y)=>{if(np>=700)return;const a=pipBalls.instanceMatrix.array,o=np*16;a.fill(0,o,o+16);a[o]=a[o+5]=a[o+10]=pipK;a[o+12]=x;a[o+13]=y;a[o+14]=BR*pipK;a[o+15]=1;np++;};
+  const pipBox=$('pip');pipBox.onclick=()=>$('zoom').click();
+  const sil=new T.Mesh(new T.PlaneGeometry(70,140),new T.MeshBasicMaterial({map:silTex,transparent:true,depthWrite:false,depthTest:false,fog:false}));sil.renderOrder=10;sil.visible=false;sil.layers.set(2);cam.layers.enable(2);cam.add(sil);
 
   // ── 카메라 리그
   const camS={eye:V(0,250,900),look:V(0,340,60),fov:46,shake:0,lean:false,focusT:0,jackT:0,joltZ:0,patrolT:0,patrolLen:0,expo:1};
@@ -236,8 +240,10 @@ const R=(()=>{
     const sB=Math.min(1.5,Math.max(1,9/(2*BR*pxPer(Math.max(1,cam.position.distanceTo(V(0,340,0)))))));
     const sD=Math.min(1.15,Math.max(1,8/(2*BR*pxPer(Math.max(1,cam.position.distanceTo(V(0,STEP[2].Y,STEP[2].Z)))))));
     n=0;ns=0;
-    for(const b of sim.balls)put(b.x-210,668-b.y,BR*sB,sB);
-    for(const b of sim.gk)put(b.x-210,668-b.y,BR*sB,sB);
+    np=0;
+    for(const b of sim.balls){put(b.x-210,668-b.y,BR*sB,sB);putPip(b.x-210,668-b.y);}
+    for(const b of sim.gk){put(b.x-210,668-b.y,BR*sB,sB);putPip(b.x-210,668-b.y);}
+    pipBalls.count=np;pipBalls.instanceMatrix.needsUpdate=true;
     for(const b of sim.dish){
       const p=dishWorld(b.k,b.x,b.y,BR*sD);let s=seen.get(b);
       if(!s){const prev=b.k?dishWorld(b.k-1,DISH[b.k-1].holes[0].x,DISH[b.k-1].holes[0].y,BR):bw(GATE.x,GK.dropY,BR);s={t:0,from:prev};seen.set(b,s);}
@@ -262,12 +268,19 @@ const R=(()=>{
     // 두드리기: 기계가 밀렸다 돌아온다
     camS.joltZ+=(0-camS.joltZ)*Math.min(1,rdt*10);machine.position.z=camS.joltZ;
     updateCam(rdt,t);
+    const cw=cv.clientWidth,chh=cv.clientHeight;renderer.setScissorTest(false);renderer.setViewport(0,0,cw,chh);
     renderer.render(scene,cam);
+    const pipOn=camS.lean&&camS.jackT<=0&&game.state==='play';pipBox.hidden=!pipOn;
+    if(pipOn){const pw=Math.round(Math.min(220,Math.max(104,cw*(cw<chh?.32:.24)))),ph=pw,px=cw-pw-8,pt=44;   // 오른쪽 위, 확대 버튼 아래
+      const a=pw/ph,H2=215,W2=215;if(a>W2/H2){pipCam.left=-H2*a;pipCam.right=H2*a;pipCam.top=H2;pipCam.bottom=-H2;}else{pipCam.left=-W2;pipCam.right=W2;pipCam.top=W2/a;pipCam.bottom=-W2/a;}
+      pipCam.updateProjectionMatrix();pipK=Math.min(3,Math.max(1,5/(2*BR*ph/430)));
+      renderer.setScissorTest(true);renderer.setScissor(px,chh-pt-ph,pw,ph);renderer.setViewport(px,chh-pt-ph,pw,ph);renderer.render(scene,pipCam);renderer.setScissorTest(false);
+      pipBox.style.cssText=`left:${cv.offsetLeft+px}px;top:${cv.offsetTop+pt}px;width:${pw}px;height:${ph}px`;}
     // 3단 무더기 칩: 3단 앞 가장자리에 붙인다
     const n3=sim.count[2];
     if(n3>0&&game.state==='play'){proj.set(STEP[2].X-(LIP+30),STEP[2].Y+bowlH(DR)-10,STEP[2].Z).add(machine.position).project(cam);   // 3단 라벨 바로 아래
       chip.hidden=false;chip.textContent=`3단 ${n3}/20`;chip.classList.toggle('hot',n3>=18);
-      chip.style.transform=`translate(${((proj.x+1)/2*cv.clientWidth).toFixed(0)}px,${((1-proj.y)/2*cv.clientHeight+cv.offsetTop).toFixed(0)}px) translate(-50%,4px)`;}
+      chip.style.transform=`translate(${Math.max(52,(proj.x+1)/2*cv.clientWidth).toFixed(0)}px,${((1-proj.y)/2*cv.clientHeight+cv.offsetTop).toFixed(0)}px) translate(-50%,4px)`;}
     else chip.hidden=true;
     // 느리면 해상도를 한 번 낮춘다
     if(!lowered){fpsT+=rdt;fpsN++;if(fpsT>=2){if(fpsT/fpsN>.02&&DPR>1.5){renderer.setPixelRatio(1.5);resize();lowered=true;}fpsT=0;fpsN=0;}}

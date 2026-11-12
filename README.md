@@ -57,7 +57,7 @@ uv run --no-project python -m http.server 8000
 index.html     마크업
 style.css      스타일 (폰 폭 520px 이하 압축 레이아웃 포함)
 js/sim.js      물리 시뮬레이션(createSim) + 게임 규칙(createGame). DOM을 쓰지 않는다
-js/render.js   3D 렌더러(Three.js). sim.js의 2D 좌표를 3D 월드로 옮겨 그리고, 카메라·연출을 맡는다
+js/render.js   3D 렌더러(Three.js). sim.js의 2D 좌표를 3D 월드로 옮겨 그리고, 카메라·연출을 맡는다. 기본 시점은 원판 확대이고, 오른쪽 위에 못 구역 미니뷰(누르면 판 전체 보기)를 함께 그린다
 js/ui.js       1인칭 UI, 소리, 입력, 메인 루프
 tools/bot.js   밸런스 측정 봇
 ```
