@@ -165,15 +165,16 @@ function createSim(rand=Math.random){
 // ── 게임 규칙: 하룻밤 승부 (하우스 AI + 군자금 + 의심도 + 직원 순찰). 수치는 tools/bot.js로 맞춘다
 const GAME={START:35e6,PREP:20e6,NIGHT:720,
   S_MASS:.7,S_DECAY:.5,CALM:3,S_FILL:.4,FILL_RATE:.2,S_BREAK:10,S_JOLT:3,S_CROWD:1.5,CROWD_AT:20,
-  T_BLOCK:40,T_LOCK:60,T_CALL:80,CALL_T:20,CALL_SAFE:70,JOLT_CD:3,WARN:3,REPAIR:60,
-  WIND_AT:1,WIND_BOOST:2,WIND_TRIG:24,WIND_REACT:.35,WIND_HOLD:1.2,          // 바람 커튼: 당첨 구멍 근처에 구슬이 오면 0.35초 늦게 분다
-  PATROL_FIRST:[35,50],PATROL_GAP:[40,60],PATROL_WARN:2,PATROL_LEN:[6,8],S_CAUGHT:12,CAUGHT_CD:1.5,S_CLEAN:5};   // 직원 순찰
+  T_BLOCK:40,T_LOCK:60,T_JITTER:4,T_CALL:80,CALL_T:20,CALL_SAFE:70,JOLT_CD:3,WARN:3,REPAIR:[45,75],   // 하우스 반응선은 밤마다 ±4 흔들린다
+  WIND_AT:1,WIND_BOOST:2,WIND_TRIG:24,WIND_REACT:[.2,.33],WIND_ALERT:.08,WIND_HOLD:1.2,   // 바람 커튼: 당첨 구멍 근처에 구슬이 오면 0.2~0.33초 늦게 분다(풍차가 묶인 뒤엔 더 빠름)
+  PATROL_FIRST:[25,45],PATROL_GAP:[30,65],PATROL_WARN:[1.5,3],PATROL_LEN:[4,9],PATROL_TENSE:.3,PATROL_LATE:180,S_CAUGHT:12,CAUGHT_CD:1.5,S_CLEAN:3};   // 직원 순찰: 의심이 높을수록, 마감이 가까울수록 자주 온다
 const between=([a,b])=>a+Math.random()*(b-a);
 function createGame(sim,mode='real'){
   const P=mode==='practice'?Object.assign({},GAME,{NIGHT:900,S_DECAY:GAME.S_DECAY*1.5,CALM:GAME.CALM/2}):GAME;   // 연습: 15분, 의심이 빨리 식는다
   const g={mode,P,lastSpill:0,state:'brief',money:P.START-P.PREP,sus:0,susMax:0,t:0,why:'',payout:0,grip:true,mass:false,fill:false,water:0,jolts:0,caught:0,
     calmT:0,nearT:0,windT:0,joltCD:0,repairT:0,repairing:false,callT:0,windArmed:false,
-    patrol:'none',patrolT:between(P.PATROL_FIRST),patrolLeft:0,caughtCD:0,offended:false,warn:[],fired0:0,flags:{},events:[]};
+    patrol:'none',patrolT:between(P.PATROL_FIRST),warnLead:between(P.PATROL_WARN),patrolLeft:0,caughtCD:0,offended:false,react:.35,
+    tBlock:P.T_BLOCK+Math.round((Math.random()*2-1)*P.T_JITTER),tLock:P.T_LOCK+Math.round((Math.random()*2-1)*P.T_JITTER),warn:[],fired0:0,flags:{},events:[]};
   const emit=(t,x)=>g.events.push({t,...x});
   const schedule=(what,fn)=>{g.warn.push({what,left:P.WARN,fn});emit('warn',{what});};   // 하우스는 3초 전에 티가 난다
   const end=(state,why)=>{g.state=state;g.why=why;sim.auto=sim.mass=false;g.fill=false;emit('end');};
@@ -193,11 +194,12 @@ function createGame(sim,mode='real'){
       if(Math.floor(g.water+1e-9)>sim.tiltFloor){sim.tiltFloor=Math.floor(g.water+1e-9);sim.apply();emit('floor');if(sim.tiltFloor===CLOG_AT)emit('clog');}}
     g.joltCD=Math.max(0,g.joltCD-dt);g.caughtCD=Math.max(0,g.caughtCD-dt);
     // 직원 순찰: 발소리(예고) → 지나감 → 깨끗하면 의심이 조금 풀린다
-    if(g.patrol==='none'&&(g.patrolT-=dt)<=P.PATROL_WARN){g.patrol='warn';emit('patrolWarn');}
+    if(g.patrol==='none'&&(g.patrolT-=dt)<=g.warnLead){g.patrol='warn';emit('patrolWarn');}
     else if(g.patrol==='warn'&&(g.patrolT-=dt)<=0){g.patrol='on';g.patrolLeft=between(P.PATROL_LEN);g.offended=false;emit('patrol',{len:g.patrolLeft});}
     else if(g.patrol==='on'){
       if(sim.mass||filling)caught();
-      if((g.patrolLeft-=dt)<=0){g.patrol='none';g.patrolT=between(P.PATROL_GAP);
+      if((g.patrolLeft-=dt)<=0){g.patrol='none';g.warnLead=between(P.PATROL_WARN);
+        g.patrolT=between(P.PATROL_GAP)*(1-P.PATROL_TENSE*Math.min(g.sus,80)/80)*(P.NIGHT-g.t<P.PATROL_LATE?.75:1);
         if(g.offended)emit('patrolEnd');else{g.sus=Math.max(0,g.sus-P.S_CLEAN);emit('patrolClean');}}}
     g.susMax=Math.max(g.susMax,g.sus);
     for(const e of sim.events){
@@ -208,14 +210,14 @@ function createGame(sim,mode='real'){
     if(!g.flags.wind&&sim.count[2]>=P.WIND_AT){g.flags.wind=1;schedule('wind',()=>{g.windArmed=true;});}   // 3단에 구슬이 오면 바람 커튼을 꺼낸다
     if(g.windArmed){                                                               // 직원이 스위치를 쥐고 있다: 당첨 구멍에 구슬이 다가가면 반응해 분다
       const h=DISH[2].holes[0];let near=false;for(const b of sim.dish)if(b.k===2&&Math.hypot(b.x-h.x,b.y-h.y)<P.WIND_TRIG){near=true;break;}
-      if(near){if((g.nearT+=dt)>=P.WIND_REACT)g.windT=P.WIND_HOLD;}else g.nearT=0;
+      if(near){if(g.nearT===0)g.react=between(P.WIND_REACT)-(sim.millLock?P.WIND_ALERT:0);if((g.nearT+=dt)>=g.react)g.windT=P.WIND_HOLD;}else g.nearT=0;
       g.windT=Math.max(0,g.windT-dt);}
     sim.wind=g.windT>0;
-    if(!g.flags.block&&g.sus>=P.T_BLOCK){g.flags.block=1;schedule('block',()=>{sim.block=true;});}
-    if(!g.flags.lock&&g.sus>=P.T_LOCK){g.flags.lock=1;schedule('lock',()=>{sim.millLock=true;sim.windPow=P.WIND_BOOST;});}
+    if(!g.flags.block&&g.sus>=g.tBlock){g.flags.block=1;schedule('block',()=>{sim.block=true;});}
+    if(!g.flags.lock&&g.sus>=g.tLock){g.flags.lock=1;schedule('lock',()=>{sim.millLock=true;sim.windPow=P.WIND_BOOST;});}
     for(let i=g.warn.length-1;i>=0;i--){const w=g.warn[i];if((w.left-=dt)<=0){g.warn.splice(i,1);w.fn();emit('house',{what:w.what});}}
     if(sim.block&&sim.broken){                                                         // 블록 센서가 켜지면 직원이 고장 난 문지기를 고치러 온다
-      if(!g.repairing){g.repairing=true;g.repairT=P.REPAIR;emit('repairStart');}
+      if(!g.repairing){g.repairing=true;g.repairT=between(P.REPAIR);emit('repairStart');}
       else if((g.repairT-=dt)<=0){sim.broken=false;g.repairing=false;emit('house',{what:'repair'});}
     }else g.repairing=false;
     if(g.sus>=100)return end('lose','kicked');

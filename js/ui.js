@@ -5,20 +5,21 @@ const LINES={
   forest:'들어갔다. 봉을 바꿔 둔 보람이 있다.',
   gkout:'날개가 닫혀 있었다. 저 문지기부터 어떻게든 해야 한다.',
   broke:'날개 축이 휘었다. 이제 열린 채다.',
-  rebroke:'다시 휘게 만들었다. 직원 눈치를 봐야 한다.',
+  rebroke:['다시 휘게 만들었다. 직원 눈치를 봐야 한다.','또 날개 축을 비틀었다. 이번엔 얼마나 버틸까.','손끝에 힘을 줬다. 날개가 다시 열린 채 멈춘다.'],
   floor:'위층 수조에 물이 차오른다. 바닥이 미세하게 기운다.',
   clog:'꽝 구멍 아래가 막혔다. 이제 원반에 구슬이 쌓인다.',
   stage3:'3단… 당첨 구멍이 하필 뒤쪽이다.',
   lose3:'앞으로 굴러 떨어진다. 기계 전체가 앞으로 숙여져 있다.',
   warn_block:'카운터 쪽 남자가 무언가를 눌렀다.',
   house_block:'문지기 위에 빨간 불이 들어왔다. 센서다.',
-  repairStart:'직원이 공구함을 들고 온다. 문지기를 고칠 생각이다.',
-  house_repair:'문지기가 고쳐졌다. 다시 1/3이다.',
+  repairStart:['직원이 공구함을 들고 온다. 문지기를 고칠 생각이다.','작업복 차림이 기계 뒤로 돌아간다. 문지기를 손볼 셈이다.','"점검 좀 하겠습니다." 공구 부딪히는 소리가 난다.'],
+  house_repair:['문지기가 고쳐졌다. 다시 1/3이다.','날개가 다시 제멋대로 여닫힌다.'],
   warn_lock:'뒤쪽이 술렁인다. 뭔가 더 걸어 올 셈이다.',
   house_lock:'풍차가 묶였다. 바람 소리도 거세졌다.',
   warn_wind:'3단을 보던 직원이 카운터로 돌아간다.',
   house_wind:'카운터의 남자가 손을 어딘가에 올려 두었다.',
   blow:'쉭— 당첨 구멍에서 바람이 뿜어져 구슬을 밀어냈다. 저 남자가 지켜보고 있다.',
+  blow2:['또 바람이다. 들어가기 직전에만 분다.','쉭— 구슬이 구멍 가장자리에서 튕겨 나간다.','카운터 쪽 손이 움찔했다. 바람이 나왔다.'],
   crowd20:'구슬이 쌓인다. 무게로 밀어 넣는 수밖에 없다.',
   crowd30:'원반이 구슬로 꽉 찼다. 다들 이쪽을 본다.',
   jolt:'쾅. 손바닥이 얼얼하다.',
@@ -28,10 +29,10 @@ const LINES={
   money:'군자금이 바닥을 보이기 시작한다.',
   time:'영업 종료까지 2분.',
   jack:'들어갔다—!',
-  patrolWarn:'등 뒤에서 구두 소리가 다가온다.',
-  patrol:'직원이 바로 뒤를 지나간다. 숨을 고른다.',
-  caught:'눈이 마주쳤다. 젠장.',
-  patrolClean:'…아무것도 못 봤다. 지나갔다.',
+  patrolWarn:['등 뒤에서 구두 소리가 다가온다.','또각, 또각. 누군가 이쪽으로 온다.','무전기 잡음이 가까워진다.'],
+  patrol:['직원이 바로 뒤를 지나간다. 숨을 고른다.','어깨 너머로 시선이 느껴진다. 손을 무릎에 올린다.','향수 냄새가 스친다. 아무 일 없는 척한다.'],
+  caught:['눈이 마주쳤다. 젠장.','"손님, 방금 뭐 하셨죠?"','발소리가 멈췄다. 보고 있다.'],
+  patrolClean:['…아무것도 못 봤다. 지나갔다.','발소리가 멀어진다. 다시 시작이다.','지나갔다. 손바닥의 땀을 바지에 닦는다.'],
   plug:'쿵. 꽝 구멍 하나가 막혔다.',
   plugAll:'3단 꽝 구멍이 전부 막혔다. 이제 쌓인다.',
 };
@@ -216,7 +217,7 @@ function handleEvents(){
       case'clog':say('clog');alertMsg('꽝 배출로 역류 시작');break;
       case'warn':SFX.warn();alertMsg('⚠ '+WARN_TXT[e.what]);say('warn_'+e.what);break;
       case'house':say('house_'+e.what,e.what==='repair');if(e.what==='repair')alertMsg('문지기가 고쳐졌다',true);break;
-      case'repairStart':say('repairStart',true);alertMsg('직원이 문지기를 고치러 온다 · 60초',true);break;
+      case'repairStart':say('repairStart',true);alertMsg(`직원이 문지기를 고치러 온다 · ${Math.round(game.repairT)}초`,true);break;
       case'call':say('call',true);break;
       case'callOff':say('callOff',true);break;
       case'jolt':popSus(game.P.S_JOLT);SFX.thump();shakeT=.25;$('view').classList.add('shake');say('jolt');break;
@@ -234,7 +235,7 @@ function handleEvents(){
 
 function popSus(n){const p=document.createElement('span');p.className='pop'+(n<0?' down':'');p.textContent=(n<0?'−':'+')+Math.abs(n);$('pops').append(p);setTimeout(()=>p.remove(),950);}
 function lamp(id,cls,txt){const e=$(id);e.className='lamp'+(cls?' '+cls:'');if(txt)e.textContent=txt;}
-let pulseT=0;
+let pulseT=0,windWas=false;
 function updateUI(dt){
   const g=game,P=g.P,left=Math.max(0,P.NIGHT-g.t),warned=w=>g.warn.some(x=>x.what===w),play=g.state==='play';
   $('money').textContent=yenTxt(Math.max(0,g.money));
@@ -267,7 +268,7 @@ function updateUI(dt){
   if(play){
     if(sim.st.forest)say('forest');
     if(g.sus>=60)say('sus60');
-    if(sim.wind)say('blow');
+    if(sim.wind&&!windWas){if(said.has('blow')){if(Math.random()<.35)say('blow2',true);}else say('blow');}windWas=sim.wind;
     if(sim.count[2]>=20)say('crowd20');
     if(sim.count[2]>=30)say('crowd30');
     if(g.money<(P.START-P.PREP)*.3)say('money');
@@ -307,7 +308,7 @@ function frame(t){
   if(alertT>0&&(alertT-=real)<=0)$('alert').hidden=true;
   if(shakeT>0&&(shakeT-=real)<=0)$('view').classList.remove('shake');
   if(game.state==='play'&&!paused&&game.patrol!=='none'&&(stepT-=real)<=0){   // 순찰 발소리
-    const pr=game.patrol==='warn'?-1+(1-Math.max(0,game.patrolT)/game.P.PATROL_WARN)*.4:-.6+(1-game.patrolLeft/patrolLen)*1.6;SFX.step(Math.max(-1,Math.min(1,pr)));stepT=.45;}
+    const pr=game.patrol==='warn'?-1+(1-Math.max(0,game.patrolT)/game.warnLead)*.4:-.6+(1-game.patrolLeft/patrolLen)*1.6;SFX.step(Math.max(-1,Math.min(1,pr)));stepT=.45;}
   if((uiT-=real)<=0){updateUI(.1);uiT=.1;}
   requestAnimationFrame(frame);
 }
