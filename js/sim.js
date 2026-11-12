@@ -17,7 +17,7 @@ for(const m of MILLS){m.spin=0;m.ang=0;}
 const DR=58,BUMP=8,HR=14,HOLE=6.5,A_CENTER=260,K_HOLE=90,V_DROP=20,DAMP=1.2;   // 구멍은 가운데 둔덕을 감싸는 링 위
 const RIDGE=[[0,-30,-15,-19],[0,-30,15,-19]];  // 3단 당첨 구멍 뒤 보이지 않는 턱(바깥으로 뾰족한 ㅅ자라 뒤에서 온 구슬은 옆으로 흘러감)
 const WIND=2200,WIND_R=HOLE+9;                 // 바람 커튼
-const CLOG_AT=7,CLOG_CAP=15,DISH_MAX=40,JOLT=350;   // 꽝 구멍 배출로는 15개 차면 역류, 판 두드리기 충격(px/s)
+const CLOG_AT=7,CLOG_CAP=12,DISH_MAX=40,JOLT=350;   // 꽝 구멍 배출로는 12개 차면 역류, 판 두드리기 충격(px/s)
 const PRICE=4000,MIN_PAY=300000000,START_BALLS=137500,FIRE_GAP=.6,MASS_GAP=.05,FLOOR=600;
 const CELL=16,COLS=Math.ceil(W/CELL),ROWS=Math.ceil(H/CELL);
 for(const d of DISH){d.holes=[];for(let i=0;i<d.n;i++){const t=d.win*Math.PI/180+2*Math.PI*i/d.n;d.holes.push({x:HR*Math.cos(t),y:HR*Math.sin(t),win:i===0,flash:0,fill:0});}}
@@ -164,11 +164,11 @@ function createSim(rand=Math.random){
 }
 // ── 게임 규칙: 하룻밤 승부 (하우스 AI + 군자금 + 의심도). 수치는 봇 시뮬레이션으로 맞춤(최적 봇 승률 약 70%)
 const GAME={START:35e6,PREP:20e6,NIGHT:720,
-  S_MASS:.5,S_DECAY:.7,S_FLOOR:2,S_BREAK:10,S_JOLT:3,S_CROWD:1.5,CROWD_AT:20,
-  T_BLOCK:40,T_LOCK:60,T_CALL:80,CALL_T:20,CALL_SAFE:70,FLOOR_CD:8,JOLT_CD:3,WARN:3,REPAIR:60,WIND_AT:3,WIND_BOOST:2};
+  S_MASS:.7,S_DECAY:.5,CALM:3,S_FLOOR:2,S_BREAK:10,S_JOLT:3,S_CROWD:1.5,CROWD_AT:20,
+  T_BLOCK:40,T_LOCK:60,T_CALL:80,CALL_T:20,CALL_SAFE:70,FLOOR_CD:8,JOLT_CD:3,WARN:3,REPAIR:60,WIND_AT:1,WIND_BOOST:2};   // 바람 커튼은 3단에 첫 구슬이 오면 꺼낸다(구슬 한두 개를 두드려 넣는 지름길 차단)
 function createGame(sim,mode='real'){
-  const P=mode==='practice'?Object.assign({},GAME,{NIGHT:900,S_DECAY:1}):GAME;   // 연습: 15분, 의심이 빨리 식는다
-  const g={mode,P,lastSpill:0,state:'brief',money:P.START-P.PREP,sus:0,susMax:0,t:0,why:'',payout:0,grip:true,mass:false,jolts:0,
+  const P=mode==='practice'?Object.assign({},GAME,{NIGHT:900,S_DECAY:GAME.S_DECAY*1.5,CALM:GAME.CALM/2}):GAME;   // 연습: 15분, 의심이 빨리 식는다
+  const g={mode,P,lastSpill:0,state:'brief',money:P.START-P.PREP,sus:0,susMax:0,t:0,why:'',payout:0,grip:true,mass:false,jolts:0,calmT:0,
     floorCD:0,joltCD:0,repairT:0,repairing:false,callT:0,windArmed:false,warn:[],fired0:0,flags:{},events:[]};
   const emit=(t,x)=>g.events.push({t,...x});
   const schedule=(what,fn)=>{g.warn.push({what,left:P.WARN,fn});emit('warn',{what});};   // 하우스는 3초 전에 티가 난다
@@ -181,7 +181,8 @@ function createGame(sim,mode='real'){
     g.t+=dt;
     const f=sim.st.fired-g.fired0;if(f){g.money-=f*PRICE;g.fired0=sim.st.fired;}
     const canFire=g.money>=PRICE;sim.auto=g.grip&&canFire;sim.mass=sim.auto&&g.mass;
-    g.sus=Math.max(0,g.sus+(sim.mass?P.S_MASS:-P.S_DECAY)*dt+(sim.count[2]>=P.CROWD_AT?P.S_CROWD*dt:0));
+    if(sim.mass)g.calmT=P.CALM;else g.calmT=Math.max(0,g.calmT-dt);              // 수상한 짓을 멈추고 CALM초가 지나야 식기 시작한다
+    g.sus=Math.max(0,g.sus+(sim.mass?P.S_MASS:g.calmT>0?0:-P.S_DECAY)*dt+(sim.count[2]>=P.CROWD_AT?P.S_CROWD*dt:0));
     g.susMax=Math.max(g.susMax,g.sus);
     g.floorCD=Math.max(0,g.floorCD-dt);g.joltCD=Math.max(0,g.joltCD-dt);
     for(const e of sim.events){
@@ -205,9 +206,9 @@ function createGame(sim,mode='real'){
     if(!canFire&&!sim.balls.length&&!sim.gk.length&&!sim.dish.length)return end('lose','broke');
   };
   g.floorUp=()=>{if(g.state!=='play'||g.floorCD>0||sim.tiltFloor>=CLOG_AT)return false;
-    sim.tiltFloor++;sim.apply();g.sus+=P.S_FLOOR;g.floorCD=P.FLOOR_CD;emit('floor');if(sim.tiltFloor===CLOG_AT)emit('clog');return true;};
-  g.breakGate=()=>{if(g.state!=='play'||sim.broken)return false;sim.broken=true;g.sus+=P.S_BREAK;emit('broke');return true;};
-  g.jolt=()=>{if(g.state!=='play'||g.joltCD>0)return false;g.lastSpill=sim.jolt();g.sus+=P.S_JOLT;g.joltCD=P.JOLT_CD;g.jolts++;emit('jolt');return true;};
+    sim.tiltFloor++;sim.apply();g.sus+=P.S_FLOOR;g.calmT=P.CALM;g.floorCD=P.FLOOR_CD;emit('floor');if(sim.tiltFloor===CLOG_AT)emit('clog');return true;};
+  g.breakGate=()=>{if(g.state!=='play'||sim.broken)return false;sim.broken=true;g.sus+=P.S_BREAK;g.calmT=P.CALM;emit('broke');return true;};
+  g.jolt=()=>{if(g.state!=='play'||g.joltCD>0)return false;g.lastSpill=sim.jolt();g.sus+=P.S_JOLT;g.calmT=P.CALM;g.joltCD=P.JOLT_CD;g.jolts++;emit('jolt');return true;};
   return g;
 }
 // SIM-END

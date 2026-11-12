@@ -95,7 +95,7 @@ function jackTick(dt){if($('jack').hidden||!game.payout)return;jackT+=dt;const p
   $('jackAmt').textContent=yenTxt(game.payout*e);}
 function act(txt){const a=$('act');a.textContent=txt;a.hidden=false;actT=1.4;}
 function setGrip(on){game.grip=on;$('grip').setAttribute('aria-pressed',on);$('grip').textContent=on?'발사 중':'멈춤';}
-function setMass(on){if(on&&!game.mass&&game.state==='play'){if(!game.grip)setGrip(true);act(game.money<PRICE?'군자금이 없다':'물량 · 초당 20발을 쏟아붓는다 · 누르는 동안 의심 +0.5/초');}game.mass=on;$('mass').classList.toggle('held',on);}
+function setMass(on){if(on&&!game.mass&&game.state==='play'){if(!game.grip)setGrip(true);act(game.money<PRICE?'군자금이 없다':'물량 · 초당 20발을 쏟아붓는다 · 누르는 동안 의심 +0.7/초');}game.mass=on;$('mass').classList.toggle('held',on);}
 function toggleGrip(){setGrip(!game.grip);act(game.grip?'핸들을 잡았다 · 분당 100발 발사':'핸들을 놓았다 · 발사 멈춤 (군자금을 아낀다)');}
 function doJolt(){if(game.jolt()){joltFx=.6;act(game.lastSpill?`쾅! 3단 앞쪽 구슬 ${game.lastSpill}개가 넘쳐 나가고 나머지는 뒤로 튄다 · 의심 +3`:'쾅! 원반 위 구슬이 뒤로 튄다 · 의심 +3');}else if(game.state==='play')act(`두드리기는 ${game.joltCD.toFixed(1)}초 뒤에 다시 된다`);}
 function doFloor(){const n0=sim.tiltFloor;
@@ -187,15 +187,15 @@ function handleEvents(){
       case'enter':if(e.k===2){if(!said.has('stage3'))slow=1.2;say('stage3');}break;
       case'lose':SFX.drop();if(e.k===2)say('lose3');break;
       case'gkout':say('gkout');break;
-      case'broke':SFX.crack();if(said.has('broke'))say('rebroke',true);else say('broke');break;
-      case'floor':SFX.creak();say('floor');break;
+      case'broke':popSus(game.P.S_BREAK);SFX.crack();if(said.has('broke'))say('rebroke',true);else say('broke');break;
+      case'floor':popSus(game.P.S_FLOOR);SFX.creak();say('floor');break;
       case'clog':say('clog');alertMsg('꽝 배출로 역류 시작');break;
       case'warn':SFX.warn();alertMsg('⚠ '+WARN_TXT[e.what]);say('warn_'+e.what);break;
       case'house':say('house_'+e.what,e.what==='repair');if(e.what==='repair')alertMsg('문지기가 고쳐졌다',true);break;
       case'repairStart':say('repairStart',true);alertMsg('직원이 문지기를 고치러 온다 · 60초',true);break;
       case'call':say('call',true);break;
       case'callOff':say('callOff',true);break;
-      case'jolt':SFX.thump();shakeT=.25;$('view').classList.add('shake');say('jolt');break;
+      case'jolt':popSus(game.P.S_JOLT);SFX.thump();shakeT=.25;$('view').classList.add('shake');say('jolt');break;
       case'jack':{const big=game.mode!=='practice';
         (big?SFX.jackBig:SFX.jack)();celebT=big?3.6:1.6;jackT=0;jackDur=big?2:.8;bursts=big?4:0;burstT=.45;
         $('jackMode').textContent=big?'본게임':'연습';$('jackAmt').textContent='¥0';$('jack').hidden=false;burst(big?90:30);
@@ -208,14 +208,15 @@ function handleEvents(){
   game.events.length=0;
 }
 
+function popSus(n){const p=document.createElement('span');p.className='pop';p.textContent='+'+n;$('pops').append(p);setTimeout(()=>p.remove(),950);}
 function lamp(id,cls,txt){const e=$(id);e.className='lamp'+(cls?' '+cls:'');if(txt)e.textContent=txt;}
 let pulseT=0;
 function updateUI(dt){
   const g=game,P=g.P,left=Math.max(0,P.NIGHT-g.t),warned=w=>g.warn.some(x=>x.what===w),play=g.state==='play';
   $('money').textContent=yenTxt(Math.max(0,g.money));
   $('clock').textContent=fmtT(left);
-  const rate=(sim.mass?P.S_MASS:-P.S_DECAY)+(sim.count[2]>=P.CROWD_AT?P.S_CROWD:0),still=rate<0&&g.sus<=0;
-  $('susTxt').textContent=Math.round(g.sus)+(play&&!still?` ${rate>0?'▲':'▼'}${Math.abs(rate).toFixed(1)}/초`:'');$('susTxt').className=play&&rate>0?'up':'';$('susFill').style.width=Math.min(100,g.sus)+'%';
+  const crowd=sim.count[2]>=P.CROWD_AT?P.S_CROWD:0,calm=!sim.mass&&g.calmT>0,rate=(sim.mass?P.S_MASS:calm?0:-P.S_DECAY)+crowd,still=rate<0&&g.sus<=0;
+  $('susTxt').textContent=Math.round(g.sus)+(!play||still?'':calm&&!crowd?` · ${Math.ceil(g.calmT)}초 뒤 식음`:` ${rate>0?'▲':'▼'}${Math.abs(rate).toFixed(1)}/초`);$('susTxt').className=play&&rate>0?'up':'';
   $('pool').textContent=yenTxt(sim.pool*PRICE);
   lamp('L-block',sim.block?'on':warned('block')?'warn':'');
   lamp('L-lock',sim.millLock?'on':warned('lock')?'warn':'');
@@ -230,7 +231,7 @@ function updateUI(dt){
   $('joltSub').textContent=g.joltCD>0?`${g.joltCD.toFixed(1)}초 뒤`:'뒤로 튕김 · +3';
   $('floorSub').textContent=sim.tiltFloor>=CLOG_AT?'역류 중':g.floorCD>0?`${Math.ceil(g.floorCD)}초 뒤 · ${sim.tiltFloor}/7`:`${sim.tiltFloor}/7 · +2`;
   $('breakSub').textContent=sim.broken?(g.repairing?`수리 ${Math.ceil(g.repairT)}초 전`:'부서짐'):'날개 고정 · +10';
-  $('massSub').textContent=sim.mass?'쏟아붓는 중':g.money<PRICE?'군자금 없음':'초당 20발 · +0.5/초';
+  $('massSub').textContent=sim.mass?'쏟아붓는 중':g.money<PRICE?'군자금 없음':'초당 20발 · +0.7/초';
   $('goal').textContent=goalText();$('goalBox').classList.toggle('danger',play&&sim.count[2]>=18);
   if(play){hist.push([sim.st.fired,sim.st.forest]);while(hist.length>2&&hist[1][0]<=sim.st.fired-100)hist.shift();}
   const h0=hist[0]||[0,0],df=sim.st.fired-h0[0],dg=sim.st.forest-h0[1],aim=$('aim');

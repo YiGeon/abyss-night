@@ -32,7 +32,11 @@ body{margin:0;overflow:hidden;color:var(--fg);font-family:var(--f-body);font-siz
 .sus .bar{position:relative;height:10px;background:var(--lcd);border:1px solid var(--line);border-radius:6px;overflow:hidden}
 .sus .bar i{position:absolute;inset:0 auto 0 0;width:0;background:linear-gradient(90deg,var(--good),var(--amber) 55%,var(--crimson));transition:width .15s linear}
 .sus .bar b{position:absolute;top:0;bottom:0;width:1px;background:var(--fg);opacity:.45}
-.sus .row{display:flex;justify-content:space-between;gap:8px}
+.sus .row{display:flex;justify-content:space-between;gap:8px;position:relative}
+.pops{position:relative;flex:1;min-width:0}
+.pop{position:absolute;right:0;top:-2px;font-family:var(--f-num);font-weight:700;font-size:13px;color:var(--crimson);pointer-events:none}
+@media (prefers-reduced-motion:no-preference){.pop{animation:popup .9s ease-out forwards}}
+@keyframes popup{to{transform:translateY(-14px);opacity:0}}
 .lamps{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px;min-width:0}
 .hud>*,.app>*{min-width:0}
 .lamp{font-size:11px;padding:2px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted);background:var(--ink)}
