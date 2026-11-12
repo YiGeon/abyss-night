@@ -33,11 +33,13 @@ body{margin:0;overflow:hidden;color:var(--fg);font-family:var(--f-body);font-siz
 .sus .bar i{position:absolute;inset:0 auto 0 0;width:0;background:linear-gradient(90deg,var(--good),var(--amber) 55%,var(--crimson));transition:width .15s linear}
 .sus .bar b{position:absolute;top:0;bottom:0;width:1px;background:var(--fg);opacity:.45}
 .sus .row{display:flex;justify-content:space-between;gap:8px;position:relative}
+.sus .row span{white-space:nowrap}   /* 의심도 옆 속도 표시가 바뀌어도 한 줄 */
 .pops{position:relative;flex:1;min-width:0}
 .pop{position:absolute;right:0;top:-2px;font-family:var(--f-num);font-weight:700;font-size:13px;color:var(--crimson);pointer-events:none}
 @media (prefers-reduced-motion:no-preference){.pop{animation:popup .9s ease-out forwards}}
 @keyframes popup{to{transform:translateY(-14px);opacity:0}}
-.lamps{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px;min-width:0}
+.lamps{grid-column:1/-1;display:flex;flex-wrap:nowrap;overflow:hidden;gap:6px;min-width:0}   /* 줄바꿈 금지: 높이가 변하면 3D 화면이 출렁인다 */
+.lamp{white-space:nowrap}
 .hud>*,.app>*{min-width:0}
 .lamp{font-size:11px;padding:2px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted);background:var(--ink)}
 .lamp.warn{border-color:var(--amber);color:var(--amber)}
@@ -47,9 +49,9 @@ body{margin:0;overflow:hidden;color:var(--fg);font-family:var(--f-body);font-siz
 @media (prefers-reduced-motion:no-preference){.lamp.warn{animation:blink .5s steps(2) infinite}}
 @keyframes blink{50%{opacity:.25}}
 .mute{font:inherit;font-size:12px;background:none;border:1px solid var(--line);color:var(--muted);border-radius:999px;padding:2px 10px;cursor:pointer}
-.goal{grid-column:1/-1;display:flex;gap:8px;align-items:baseline;font-size:13px;line-height:1.45;background:var(--ink);border:1px solid var(--line);border-radius:8px;padding:5px 10px;min-width:0}
+.goal{grid-column:1/-1;display:flex;gap:8px;align-items:center;height:50px;overflow:hidden;font-size:13px;line-height:1.45;background:var(--ink);border:1px solid var(--line);border-radius:8px;padding:5px 10px;min-width:0}   /* 높이 고정(두 줄) */
 .goal b{color:var(--amber);font-size:11px;letter-spacing:.08em;flex:none}
-.goal #goal{min-width:0;flex:1}
+.goal #goal{min-width:0;flex:1;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .goal .tools{display:flex;gap:4px;flex:none;align-self:center}
 .goal.danger{border-color:var(--crimson);background:color-mix(in srgb,var(--crimson) 18%,var(--ink))}
 .sus #susTxt.up{color:var(--crimson)}
@@ -80,8 +82,8 @@ canvas{display:block;width:100%;height:100%;min-height:0;border-radius:12px}
 .pip.collapsed{width:auto;height:auto;padding:4px 10px;border-width:1px;border-radius:999px;background:color-mix(in srgb,var(--hall) 85%,transparent);box-shadow:none}
 .pip.collapsed span{position:static;background:none;padding:0;font-size:12px}
 /* 독백·경고 */
-.mono{min-height:3.1em;display:grid;place-items:center;border-block:1px solid var(--line);padding-block:4px}   /* 독백은 기계 밖 자막 줄 — 판을 가리지 않는다 */
-.mono p{margin:0;font-family:var(--f-voice);font-weight:700;font-size:clamp(14px,3.4vw,16px);line-height:1.45;text-align:center;text-wrap:balance}
+.mono{height:58px;overflow:hidden;display:grid;place-items:center;border-block:1px solid var(--line);padding-block:4px}   /* 높이 고정(두 줄): 글이 바뀌어도 3D 화면이 출렁이지 않게 */   /* 독백은 기계 밖 자막 줄 — 판을 가리지 않는다 */
+.mono p{margin:0;font-family:var(--f-voice);font-weight:700;font-size:clamp(14px,3.4vw,16px);line-height:1.45;text-align:center;text-wrap:balance;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 #act{font-family:var(--f-body);color:var(--good);font-size:14px}
 #act:not([hidden])~#mono{display:none}
 .alert{position:absolute;top:8px;left:50%;transform:translateX(-50%);max-width:calc(100% - 16px);background:var(--amber);color:var(--ink);font-weight:700;font-size:13px;padding:6px 14px;border-radius:999px;pointer-events:none;text-align:center}
@@ -111,7 +113,7 @@ canvas{display:block;width:100%;height:100%;min-height:0;border-radius:12px}
 .deck button .lbl,.deck button small{position:relative}
 #floor.held{filter:brightness(1.25);transform:translateY(2px)}
 .pop.down{color:var(--good)}
-#grip{padding:4px 10px;font-size:12px;min-height:0}
+#grip{padding:4px 10px;font-size:12px;min-height:0;white-space:nowrap}
 #grip[aria-pressed="true"]{border-color:var(--good);color:var(--good)}
 #mass{font-family:var(--f-display);font-size:22px;background:linear-gradient(180deg,var(--crimson),#9c1a2d);border-color:var(--crimson)}
 #mass small{font-family:var(--f-body);color:var(--fg);opacity:.8}
@@ -122,16 +124,20 @@ canvas{display:block;width:100%;height:100%;min-height:0;border-radius:12px}
 .zoom[aria-pressed="true"]{border-color:var(--good);color:var(--good)}
 .zoom:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
 /* 폰: 기계 화면을 최대한 크게 — HUD·자막·손을 한 줄씩으로 압축 */
+/* 720px 이하: 하우스 상태 7개를 줄임말로 한 줄에(스크롤·줄바꿈 없이) */
+@media (max-width:720px){
+  .lamps{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px}
+  .lamp{overflow:hidden;text-align:center;font-size:10.5px;padding:2px 0;letter-spacing:-.02em}
+  .lamp .l{display:none} .lamp .s{display:inline}
+}
 @media (max-width:520px){
+  .lamp{font-size:10px}
   .app{gap:5px;padding-block:max(6px,env(safe-area-inset-top,0px)) max(6px,env(safe-area-inset-bottom,0px))}
   .hud{gap:3px 10px}
   .hud strong{font-size:15px}
-  .lamps{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px}   /* 7개 상태를 한 줄에 다(스크롤 없이) */
-  .lamp{white-space:nowrap;overflow:hidden;text-align:center;font-size:10px;padding:2px 0;letter-spacing:-.02em}
-  .lamp .l{display:none} .lamp .s{display:inline}
   .mute{white-space:nowrap;font-size:10.5px;padding:1px 7px}
-  .goal{font-size:12px;padding:3px 8px}
-  .mono{min-height:2.7em;padding-block:2px}
+  .goal{font-size:12px;padding:3px 8px;height:42px}
+  .mono{height:46px;padding-block:2px}
   .mono p{font-size:13.5px}
   #act{font-size:12.5px}
   .deck{grid-template-columns:64px minmax(0,1.15fr) repeat(3,minmax(0,1fr));grid-template-rows:96px;gap:5px}
