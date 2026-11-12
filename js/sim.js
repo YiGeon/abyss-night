@@ -16,7 +16,8 @@ const MILLS=[{x:88,y:290,s:1},{x:332,y:290,s:-1},{x:66,y:478,s:1},{x:354,y:478,s
 for(const m of MILLS){m.spin=0;m.ang=0;}
 const DR=58,BUMP=8,HR=14,HOLE=6.5,A_CENTER=260,K_HOLE=90,V_DROP=20,DAMP=1.2;   // 구멍은 가운데 둔덕을 감싸는 링 위
 const RIDGE=[[0,-30,-15,-19],[0,-30,15,-19]];  // 3단 당첨 구멍 뒤 보이지 않는 턱(바깥으로 뾰족한 ㅅ자라 뒤에서 온 구슬은 옆으로 흘러감)
-const WIND=2200,WIND_R=HOLE+9;                 // 바람 커튼
+const WIND=1800,   // 3단 바람 커튼 세기(2200 → 1800: 무더기로 밀면 거의 뚫리게)
+      WIND_R=HOLE+9;                 // 바람 커튼
 const CLOG_AT=7,CLOG_CAP=12,DISH_MAX=40,JOLT=350;   // 꽝 구멍 배출로는 12개 차면 역류, 판 두드리기 충격(px/s)
 const PRICE=4000,MIN_PAY=300000000,START_BALLS=137500,FIRE_GAP=.6,MASS_GAP=.05,FLOOR=600;
 const CELL=16,COLS=Math.ceil(W/CELL),ROWS=Math.ceil(H/CELL);
@@ -166,7 +167,7 @@ function createSim(rand=Math.random){
 const GAME={START:35e6,PREP:20e6,NIGHT:720,
   S_MASS:.7,S_DECAY:.5,CALM:3,S_FILL:.4,FILL_RATE:.2,S_BREAK:10,S_JOLT:3,S_CROWD:1.5,CROWD_AT:20,
   T_BLOCK:40,T_LOCK:60,T_JITTER:4,T_CALL:80,CALL_T:20,CALL_SAFE:70,JOLT_CD:3,WARN:3,REPAIR:[45,75],   // 하우스 반응선은 밤마다 ±4 흔들린다
-  WIND_AT:1,WIND_BOOST:2,WIND_TRIG:24,WIND_REACT:[.2,.33],WIND_ALERT:.08,WIND_HOLD:1.2,   // 바람 커튼: 당첨 구멍 근처에 구슬이 오면 0.2~0.33초 늦게 분다(풍차가 묶인 뒤엔 더 빠름)
+  WIND_AT:1,WIND_BOOST:1.5,WIND_TRIG:24,WIND_REACT:[.2,.33],WIND_ALERT:.08,WIND_HOLD:1.2,   // 바람 커튼: 당첨 구멍 근처에 구슬이 오면 0.2~0.33초 늦게 분다(풍차가 묶인 뒤엔 더 빠름)
   PATROL_FIRST:[25,45],PATROL_GAP:[30,65],PATROL_WARN:[1.5,3],PATROL_LEN:[4,9],PATROL_TENSE:.3,PATROL_LATE:180,S_CAUGHT:12,CAUGHT_CD:1.5,S_CLEAN:3};   // 직원 순찰: 의심이 높을수록, 마감이 가까울수록 자주 온다
 const between=([a,b])=>a+Math.random()*(b-a);
 function createGame(sim,mode='real'){

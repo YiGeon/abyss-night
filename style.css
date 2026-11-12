@@ -162,6 +162,17 @@ canvas{display:block;width:100%;height:100%;min-height:0;border-radius:12px}
 .card ul{margin:0;padding-left:18px;display:grid;gap:4px;line-height:1.55}
 .card .keys{font-size:12.5px;color:var(--muted)}
 .card kbd{font-family:var(--f-num);font-size:11px;border:1px solid var(--line);border-radius:4px;padding:0 4px;color:var(--fg)}
+/* 브리핑: 한 화면에 핵심만, 자세한 규칙은 접어 둔다 */
+.card .steps{margin:0;padding-left:20px;display:grid;gap:4px;line-height:1.55}
+.warnline{margin:0;font-size:13px;color:var(--muted);line-height:1.5}
+.warnline b{color:var(--crimson);margin-right:8px}
+.keymap{display:none;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px 10px;font-size:12.5px;color:var(--muted)}
+.keymap span{display:flex;align-items:center;gap:4px;white-space:nowrap}
+.touchline{margin:0;font-size:13px;color:var(--muted)}
+@media (hover:hover) and (pointer:fine){.keymap{display:grid}.touchline{display:none}}
+.more{border-top:1px solid var(--line);padding-top:10px}
+.more summary{cursor:pointer;font-size:13px;color:var(--muted);font-weight:700}
+.more[open]{display:grid;gap:12px}
 .go{font:inherit;font-family:var(--f-display);font-size:20px;color:var(--ink);background:var(--gold);border:0;border-radius:10px;padding:12px 18px;cursor:pointer;justify-self:start}
 .go:focus-visible{outline:2px solid var(--amber);outline-offset:3px}
 .stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 16px;margin:0}
