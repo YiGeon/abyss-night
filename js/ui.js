@@ -103,7 +103,7 @@ let actT=0,paused=false,celebT=0,bursts=0,burstT=0,jackT=0,jackDur=1,againMode='
 function jackTick(dt){if($('jack').hidden||!game.payout)return;jackT+=dt;const p=Math.min(1,jackT/jackDur),e=1-Math.pow(1-p,3);
   $('jackAmt').textContent=yenTxt(game.payout*e);}
 function act(txt){const a=$('act');a.textContent=txt;a.hidden=false;actT=1.4;}
-function setGrip(on){game.grip=on;$('grip').setAttribute('aria-pressed',on);$('grip').textContent=on?'발사 중':'멈춤';}
+function setGrip(on){game.grip=on;$('grip').setAttribute('aria-pressed',on);$('gripTxt').textContent=on?'발사 중':'멈춤';}
 function setMass(on){if(on&&!game.mass&&game.state==='play'){if(!game.grip)setGrip(true);act(game.money<PRICE?'군자금이 없다':'물량 · 초당 20발을 쏟아붓는다 · 누르는 동안 의심 +0.7/초');}game.mass=on;$('mass').classList.toggle('held',on);}
 function toggleGrip(){setGrip(!game.grip);act(game.grip?'핸들을 잡았다 · 분당 100발 발사':'핸들을 놓았다 · 발사 멈춤 (군자금을 아낀다)');}
 function doJolt(){if(game.jolt()){R.jolt();act(game.lastSpill?`쾅! 3단 앞쪽 구슬 ${game.lastSpill}개가 넘쳐 나가고 나머지는 뒤로 튄다 · 의심 +3`:'쾅! 원반 위 구슬이 뒤로 튄다 · 의심 +3');}else if(game.state==='play')act(`두드리기는 ${game.joltCD.toFixed(1)}초 뒤에 다시 된다`);}
@@ -124,13 +124,17 @@ $('mute').onclick=()=>{muted=!muted;if(master)master.gain.value=muted?0:.6;$('mu
 $('help').onclick=()=>{if(game.state==='play'){paused=true;setMass(false);setFill(false);$('sit').textContent='계속하기';$('sitPractice').hidden=true;}$('brief').hidden=false;$('sit').focus();};
 addEventListener('blur',()=>{setMass(false);setFill(false);});
 document.addEventListener('visibilitychange',()=>{if(document.hidden){setMass(false);setFill(false);}});
+// 단축키: 화면 버튼 순서대로 왼손 홈 줄 A S D F, 다이얼 Q/E(←/→), 발사 Space. 한글 입력 상태에서도 되도록 물리 키 위치(e.code)로 판정
+const KEYS={KeyA:'mass',KeyS:'jolt',KeyD:'fill',KeyF:'break',KeyQ:'down',KeyE:'up',ArrowLeft:'down',ArrowRight:'up'};
 addEventListener('keydown',e=>{
-  if(game.state!=='play'||paused||e.repeat)return;
-  const k=e.key.toLowerCase();
+  if(game.state!=='play'||paused)return;
+  const a=KEYS[e.code];
+  if(a==='down'||a==='up'){if(e.target!==dial){e.preventDefault();setPower(sim.power+(a==='up'?2:-2));}return;}   // 누르고 있으면 계속 돈다
+  if(e.repeat)return;
   if(e.code==='Space'){e.preventDefault();toggleGrip();}
-  else if(k==='m')setMass(true);else if(k==='j')doJolt();else if(k==='f')setFill(true);else if(k==='b')doBreak();
+  else if(a==='mass')setMass(true);else if(a==='jolt')doJolt();else if(a==='fill')setFill(true);else if(a==='break')doBreak();
 });
-addEventListener('keyup',e=>{const k=e.key.toLowerCase();if(k==='m')setMass(false);if(k==='f')setFill(false);});
+addEventListener('keyup',e=>{const a=KEYS[e.code];if(a==='mass')setMass(false);if(a==='fill')setFill(false);});
 
 // 시작·끝
 const fmtT=s=>`${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
@@ -218,6 +222,7 @@ function updateUI(dt){
   $('money').textContent=yenTxt(Math.max(0,g.money));
   $('clock').textContent=fmtT(left);
   const crowd=sim.count[2]>=P.CROWD_AT?P.S_CROWD:0,calm=!sim.mass&&g.calmT>0,rate=(sim.mass?P.S_MASS:calm?0:-P.S_DECAY)+crowd,still=rate<0&&g.sus<=0;
+  $('susFill').style.width=Math.min(100,g.sus)+'%';   // 의심도 바(c17219a에서 빠졌던 줄)
   $('susTxt').textContent=Math.round(g.sus)+(!play||still?'':calm&&!crowd?` · ${Math.ceil(g.calmT)}초 뒤 식음`:` ${rate>0?'▲':'▼'}${Math.abs(rate).toFixed(1)}/초`);$('susTxt').className=play&&rate>0?'up':'';
   $('pool').textContent=yenTxt(sim.pool*PRICE);
   lamp('L-block',sim.block?'on':warned('block')?'warn':'');

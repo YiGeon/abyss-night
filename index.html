@@ -41,20 +41,21 @@
 
   <footer class="deck">
     <div class="handle">
-      <svg id="dial" viewBox="0 0 120 120" role="slider" tabindex="0" aria-label="발사 핸들 세기" aria-valuemin="0" aria-valuemax="100" aria-valuenow="60">
+      <svg id="dial" viewBox="0 0 120 120" role="slider" tabindex="0" aria-label="발사 핸들 세기 (Q·E 또는 ←·→)" aria-valuemin="0" aria-valuemax="100" aria-valuenow="60">
         <circle cx="60" cy="60" r="56" fill="var(--lcd)" stroke="var(--line)" stroke-width="2"/>
         <path id="arc" fill="none" stroke="var(--amber)" stroke-width="6" stroke-linecap="round"/>
         <g id="knob"><circle cx="60" cy="60" r="34" fill="var(--raise)" stroke="var(--gold)" stroke-width="3"/><rect x="56" y="24" width="8" height="26" rx="4" fill="var(--gold)"/></g>
         <text x="60" y="68" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="20" fill="var(--fg)" id="dialTxt">60</text>
+        <text x="60" y="86" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--muted)" class="key-svg">Q · E</text>
       </svg>
-      <button id="grip" aria-pressed="true">발사 중</button>
+      <button id="grip" aria-pressed="true" title="Space: 발사 켜기/끄기"><span id="gripTxt">발사 중</span><kbd class="key in">Space</kbd></button>
       <small class="aim" id="aim">IN –</small>
     </div>
-    <button id="mass">물량<small id="massSub">초당 20발 · +0.7/초</small></button>
+    <button id="mass" title="A 키를 누르고 있어도 된다"><span class="lbl">물량<kbd class="key in">A</kbd></span><small id="massSub">초당 20발 · +0.7/초</small></button>
     <div class="acts">
-      <button id="jolt">두드리기<small id="joltSub">뒤로 튕김 · +3</small><i class="cd" id="joltCd"></i></button>
-      <button id="floor"><i class="water" id="water"></i><span class="lbl">물 채우기</span><small id="floorSub">누르고 있기 · +0.4/초</small></button>
-      <button id="break">문지기 부수기<small id="breakSub">날개 고정 · +10</small></button>
+      <button id="jolt" title="S 키"><span class="lbl">두드리기<kbd class="key in">S</kbd></span><small id="joltSub">뒤로 튕김 · +3</small><i class="cd" id="joltCd"></i></button>
+      <button id="floor" title="D 키를 누르고 있어도 된다"><i class="water" id="water"></i><span class="lbl">물 채우기<kbd class="key in">D</kbd></span><small id="floorSub">누르고 있기 · +0.4/초</small></button>
+      <button id="break" title="F 키"><span class="lbl">문지기 부수기<kbd class="key in">F</kbd></span><small id="breakSub">날개 고정 · +10</small></button>
     </div>
   </footer>
 </div>
@@ -78,11 +79,11 @@
     </ul>
     <h2>버튼이 하는 일</h2>
     <ul>
-      <li><b>핸들(다이얼)</b> 돌려서 발사 세기를 맞춘다. 맞는 세기는 밤마다 다르다(50~70 사이). 다이얼 아래 'IN 5/100발'은 최근 100발 중 IN에 들어간 수다. 5발 넘게 들어가면(녹색) 잘 맞춘 것이다. 아래 버튼으로 발사를 켜고 끈다(분당 100발). <kbd>←</kbd><kbd>→</kbd> <kbd>Space</kbd></li>
-      <li><b>물량</b> 누르고 있는 동안 초당 20발. 1초에 8만 엔이 나가고 의심이 0.7씩 오른다. 핸들을 놓았어도 누르면 다시 잡는다. <kbd>M</kbd></li>
-      <li><b>물 채우기</b> 누르고 있는 동안 위층 수조에 물이 차서 건물이 서서히 옆으로 기운다(약 35초에 7칸, 의심 +0.4/초). 7칸이 되면 원반 아래 꽝 구멍 배출로가 역류한다. 꽝 구멍마다 노란 게이지가 차고, 12개가 차면 그 구멍이 쿵 하고 막힌다. 막힌 구멍이 늘수록 원반에 구슬이 쌓인다. <kbd>F</kbd> 누르고 있기</li>
-      <li><b>문지기 부수기</b> IN 아래 문지기 날개를 열린 채 고정한다. IN을 통과한 구슬이 전부 원반으로 간다. 블록 센서가 켜진 뒤에는 직원이 1분 안팎에 고친다. <kbd>B</kbd></li>
-      <li><b>두드리기</b> 판을 쳐서 원반 위 구슬을 뒤로 튕긴다. 3초마다. 3단의 당첨 구멍(빨간 테두리)은 뒤쪽이라, 쌓인 무더기를 뒤로 밀어 넣는 유일한 방법이다. 3단에 20개 이상 쌓였을 때 두드리면 앞쪽 가장자리 구슬 2개가 넘쳐 나간다. <kbd>J</kbd></li>
+      <li><b>핸들(다이얼)</b> 돌려서 발사 세기를 맞춘다. 맞는 세기는 밤마다 다르다(50~70 사이). 다이얼 아래 'IN 5/100발'은 최근 100발 중 IN에 들어간 수다. 5발 넘게 들어가면(녹색) 잘 맞춘 것이다. 아래 버튼으로 발사를 켜고 끈다(분당 100발). 세기 <kbd>Q</kbd><kbd>E</kbd>(또는 <kbd>←</kbd><kbd>→</kbd>) · 발사 <kbd>Space</kbd></li>
+      <li><b>물량</b> 누르고 있는 동안 초당 20발. 1초에 8만 엔이 나가고 의심이 0.7씩 오른다. 핸들을 놓았어도 누르면 다시 잡는다. <kbd>A</kbd> 누르고 있기</li>
+      <li><b>물 채우기</b> 누르고 있는 동안 위층 수조에 물이 차서 건물이 서서히 옆으로 기운다(약 35초에 7칸, 의심 +0.4/초). 7칸이 되면 원반 아래 꽝 구멍 배출로가 역류한다. 꽝 구멍마다 노란 게이지가 차고, 12개가 차면 그 구멍이 쿵 하고 막힌다. 막힌 구멍이 늘수록 원반에 구슬이 쌓인다. <kbd>D</kbd> 누르고 있기</li>
+      <li><b>문지기 부수기</b> IN 아래 문지기 날개를 열린 채 고정한다. IN을 통과한 구슬이 전부 원반으로 간다. 블록 센서가 켜진 뒤에는 직원이 1분 안팎에 고친다. <kbd>F</kbd></li>
+      <li><b>두드리기</b> 판을 쳐서 원반 위 구슬을 뒤로 튕긴다. 3초마다. 3단의 당첨 구멍(빨간 테두리)은 뒤쪽이라, 쌓인 무더기를 뒤로 밀어 넣는 유일한 방법이다. 3단에 20개 이상 쌓였을 때 두드리면 앞쪽 가장자리 구슬 2개가 넘쳐 나간다. <kbd>S</kbd></li>
       <li class="keys">의심도 100이면 쫓겨난다. 80을 넘으면 직원이 오고, 20초 안에 70 아래로 못 내리면 끝이다. 수상한 짓(물량·버튼)을 멈추고 3초가 지나야 초당 0.5씩 식는다. 버튼 하나하나가 의심도에 그대로 쌓인다. 또 3단에 구슬이 20개 이상 쌓여 있으면 오히려 오른다(의심도 옆 ▲▼가 지금 속도). 화면 위 '다음 할 일'이 순서를 알려 준다.</li>
     </ul>
     <div class="gos"><button class="go" id="sit">본게임으로 앉는다</button><button class="go alt" id="sitPractice">연습으로 앉는다</button></div>
