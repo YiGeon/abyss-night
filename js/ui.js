@@ -215,7 +215,8 @@ function handleEvents(){
 }
 
 function popSus(n){const p=document.createElement('span');p.className='pop'+(n<0?' down':'');p.textContent=(n<0?'−':'+')+Math.abs(n);$('pops').append(p);setTimeout(()=>p.remove(),950);}
-function lamp(id,cls,txt){const e=$(id);e.className='lamp'+(cls?' '+cls:'');if(txt)e.textContent=txt;}
+function lamp(id,cls,txt,short){const e=$(id);e.className='lamp'+(cls?' '+cls:'');   // 폰에서는 줄임말(short)을 보여 7개가 한 줄에 다 들어간다
+  const h=`<span class="l">${txt}</span><span class="s">${short||txt}</span>`;if(e._h!==h){e.innerHTML=h;e._h=h;}}
 let pulseT=0,windWas=false;
 function updateUI(dt){
   const g=game,P=g.P,left=Math.max(0,P.NIGHT-g.t),warned=w=>g.warn.some(x=>x.what===w),play=g.state==='play';
@@ -225,13 +226,13 @@ function updateUI(dt){
   $('susFill').style.width=Math.min(100,g.sus)+'%';   // 의심도 바(c17219a에서 빠졌던 줄)
   $('susTxt').textContent=Math.round(g.sus)+(!play||still?'':calm&&!crowd?` · ${Math.ceil(g.calmT)}초 뒤 식음`:` ${rate>0?'▲':'▼'}${Math.abs(rate).toFixed(1)}/초`);$('susTxt').className=play&&rate>0?'up':'';
   $('pool').textContent=yenTxt(sim.pool*PRICE);
-  lamp('L-block',sim.block?'on':warned('block')?'warn':'');
-  lamp('L-lock',sim.millLock?'on':warned('lock')?'warn':'');
-  lamp('L-wind',sim.wind?'on':warned('wind')?'warn':'',g.windArmed&&!sim.wind?'바람 커튼 대기':'바람 커튼');
-  lamp('L-repair',g.repairing?'on':'',g.repairing?`문지기 수리 ${Math.ceil(g.repairT)}초`:'문지기 수리');
-  lamp('L-gate',sim.broken?'mine':'',sim.broken?'문지기 고장 냄':'문지기 정상');
-  lamp('L-patrol',g.patrol==='on'?'on':g.patrol==='warn'?'warn':'',g.patrol==='on'?'직원 순찰 중':g.patrol==='warn'?'발소리':'순찰');
-  lamp('L-floor',sim.tiltFloor>=CLOG_AT?'mine':'',`건물 ${sim.tiltFloor}/7`);
+  lamp('L-block',sim.block?'on':warned('block')?'warn':'','블록 센서','센서');
+  lamp('L-lock',sim.millLock?'on':warned('lock')?'warn':'','풍차 고정','풍차');
+  lamp('L-wind',sim.wind?'on':warned('wind')?'warn':'',g.windArmed&&!sim.wind?'바람 커튼 대기':'바람 커튼',g.windArmed&&!sim.wind?'바람대기':'바람');
+  lamp('L-repair',g.repairing?'on':'',g.repairing?`문지기 수리 ${Math.ceil(g.repairT)}초`:'문지기 수리',g.repairing?`수리${Math.ceil(g.repairT)}`:'수리');
+  lamp('L-gate',sim.broken?'mine':'',sim.broken?'문지기 고장 냄':'문지기 정상',sim.broken?'고장냄':'문지기');
+  lamp('L-patrol',g.patrol==='on'?'on':g.patrol==='warn'?'warn':'',g.patrol==='on'?'직원 순찰 중':g.patrol==='warn'?'발소리':'순찰',g.patrol==='on'?'순찰중':g.patrol==='warn'?'발소리':'순찰');
+  lamp('L-floor',sim.tiltFloor>=CLOG_AT?'mine':'',`건물 ${sim.tiltFloor}/7`,`건물${sim.tiltFloor}/7`);
   $('jolt').disabled=!play||g.joltCD>0;$('joltCd').style.width=(g.joltCD/P.JOLT_CD*100)+'%';
   $('floor').disabled=!play||sim.tiltFloor>=CLOG_AT;$('water').style.height=(g.water/CLOG_AT*100)+'%';
   $('break').disabled=!play||sim.broken;
